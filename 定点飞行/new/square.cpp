@@ -49,7 +49,6 @@ int main(int argc, char **argv)
     {
         return -1;
     }
-
     //check arm
     int Arm_flag;
     cout<<"Whether choose to Arm? 1 for Arm, 0 for quit"<<endl;
@@ -88,8 +87,26 @@ int main(int argc, char **argv)
         cout << "Point 0----->takeoff"<<endl;
         i++;
     }
+    //画五角星
+    //top 1
+    i = 0;
+    while(i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = size_square/2.0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = height_square;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        move_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 1----->top"<<endl;
+        i++;
+    }
 
-    //point left bottom
+    //right-bottom 2
     i = 0;
     while(i < sleep_time)
     {
@@ -103,35 +120,17 @@ int main(int argc, char **argv)
         comid++;
         move_pub.publish(Command_now);
         rate.sleep();
-        cout << "Point 1----->left-bottom"<<endl;
+        cout << "Point 2----->right-bottom"<<endl;
         i++;
     }
 
-    //point left top
+    //left-top 3
     i = 0;
     while(i < sleep_time)
     {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = size_square/2.0;
-        Command_now.pos_sp[1] = -size_square/2.0;
-        Command_now.pos_sp[2] = height_square;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
-        comid++;
-        move_pub.publish(Command_now);
-        rate.sleep();
-        cout << "Point 2----->left-top"<<endl;
-        i++;
-    }
-
-    //point right top
-    i = 0;
-    while(i < sleep_time)
-    {
-        Command_now.command = Move_ENU;
-        Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = size_square/2.0;
+        Command_now.pos_sp[0] = size_square/10.0;
         Command_now.pos_sp[1] = size_square/2.0;
         Command_now.pos_sp[2] = height_square;
         Command_now.yaw_sp = 0;
@@ -139,11 +138,29 @@ int main(int argc, char **argv)
         comid++;
         move_pub.publish(Command_now);
         rate.sleep();
-        cout << "Point 3----->right-top"<<endl;
+        cout << "Point 3----->left-top"<<endl;
         i++;
     }
 
-    //point right bottom
+    //right-up 4
+    i = 0;
+    while(i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = size_square/10.0;
+        Command_now.pos_sp[1] = -size_square/2.0;
+        Command_now.pos_sp[2] = height_square;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        move_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 4----->right-up"<<endl;
+        i++;
+    }
+
+    //right-up 5
     i = 0;
     while(i < sleep_time)
     {
@@ -157,11 +174,29 @@ int main(int argc, char **argv)
         comid++;
         move_pub.publish(Command_now);
         rate.sleep();
-        cout << "Point 4----->right-bottom"<<endl;
+        cout << "Point 4----->right-up"<<endl;
+        i++;
+    }
+    //up 6
+    i = 0;
+    while(i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = size_square/2.0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = height_square;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        move_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 4----->right-up"<<endl;
         i++;
     }
 
-    //point return
+
+    //point return 7
     i = 0;
     while(i < sleep_time)
     {
