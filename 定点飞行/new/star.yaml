@@ -1,0 +1,7 @@
+##Parameter for star.cpp
+
+size_square : 1.0
+
+height_square : 0.5
+
+sleep_time : 15.0

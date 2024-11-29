@@ -1,0 +1,7 @@
+<launch>
+	<!-- run the star.cpp -->
+	<node pkg="px4_command" type="star" name="star" output="screen">
+		<!-- load blacklist, config -->
+                <rosparam command="load" file="$(find px4_command)/config/star.yaml" />
+	</node>
+</launch>

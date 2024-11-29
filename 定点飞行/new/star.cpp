@@ -29,7 +29,7 @@ float sleep_time;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "square");
+    ros::init(argc, argv, "star");
     ros::NodeHandle nh("~");
     ros::Rate rate(1.0);
     ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
