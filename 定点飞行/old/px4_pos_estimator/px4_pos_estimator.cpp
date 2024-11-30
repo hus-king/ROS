@@ -25,7 +25,6 @@
 #include <tf2_msgs/TFMessage.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Range.h>
-
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <nlink_parser/LinktrackNodeframe2.h>
 #include <nav_msgs/Odometry.h>
