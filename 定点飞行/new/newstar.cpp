@@ -1,13 +1,14 @@
 #include <ros/ros.h>
 
 #include <iostream>
-#include <cmath>
-#include <stdlib.h>
 #include <px4_command/command.h>
+#include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
+#include <cmath>
+#include <stdlib.h>
+#include <math_utils.h>
 
 
 using namespace std;
@@ -24,6 +25,11 @@ enum Command
     Failsafe_land,
     Idle
 };
+sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
+geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
+Eigen::Quaterniond q_fcu;
+Eigen::Vector3d Euler_fcu;
+
 void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     pos_drone = *msg;
@@ -44,7 +50,7 @@ float height_pantagon;                //飞行高度
 float sleep_time;
 
 int main(int argc, char *argv[]) {
-    ros::init(argc, argv, "square");
+    ros::init(argc, argv, "newstar");
     ros::NodeHandle nh;
     ros::Rate rate(20.0);
     ros::Publisher move_pub = nh.advertise<px4_command::command>("/px4/command", 10);
@@ -100,7 +106,7 @@ int main(int argc, char *argv[]) {
         i++;
     }
     //top 1
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, -size_square / 2.0, -size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -117,7 +123,7 @@ int main(int argc, char *argv[]) {
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
     //right-bottom 2
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, -size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -135,7 +141,7 @@ int main(int argc, char *argv[]) {
     }
     //left-top 3
 
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -153,7 +159,7 @@ int main(int argc, char *argv[]) {
     }
     
     //right-up 4
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -171,7 +177,7 @@ int main(int argc, char *argv[]) {
     }
         
     //left-bottom 5
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -188,7 +194,7 @@ int main(int argc, char *argv[]) {
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
     //up 6
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
@@ -206,7 +212,7 @@ int main(int argc, char *argv[]) {
     }
     
     //return 7
-    abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, size_square / 2.0, size_square / 2.0);
+    abs_distance = 1e5;
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
