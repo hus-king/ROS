@@ -106,15 +106,17 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     //计算前后左右四向最小距离
     cal_min_distance();
 }
-
+//回调函数，当接收到 geometry_msgs::PoseStamped 类型的消息时被调用。
 void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     pos_drone = *msg;
-    // Read the Quaternion from the Mavros Package [Frame: ENU]
+    //将接收到的消息(Mavros Package [Frame: ENU])存储在全局变量 pos_drone 中。  
     Eigen::Quaterniond q_fcu_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
+    //从消息中提取四元数，表示无人机在ENU坐标系下的姿态。
     q_fcu = q_fcu_enu;
-    //Transform the Quaternion to Euler Angles
+    //将提取的四元数存储在全局变量 q_fcu 中。
     Euler_fcu = quaternion_to_euler(q_fcu);
+    //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
@@ -329,11 +331,21 @@ void collision_avoidance(float target_x,float target_y)
         }else{
             vel_collision[1] = vel_collision[1] - F_c * distance_cy /distance_c;
         }
-        //避障速度限幅
-        for (int i = 0; i < 2; i++)
-        {
-            vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);
+//hsq2
+        //避障速度限幅（需要等比例修改）
+        float vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
+        //取较大
+        if (vel_max > vel_collision_max){
+            for (int i = 0; i < 2; i++)
+            {
+                vel_collision[i] = vel_collision[i] * vel_collision_max / vel_max;
+            }
         }
+        // for (int i = 0; i < 2; i++)
+        // {
+        //     vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);
+        // }
+//hsq02
     }
 
     vel_sp_body[0] = vel_track[0] + vel_collision[0];
@@ -342,13 +354,15 @@ void collision_avoidance(float target_x,float target_y)
     //找当前位置到目标点的xy差值，如果出现其中一个差值小，另一个差值大，
     //且过了一会还是保持这个差值就开始从差值入手。
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
-
+//hsq1
+    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
+    //先转换再计算速度
     for (int i = 0; i < 2; i++)
     {
         vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
     }
-    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
 }
+//hsq01
 
 void printf()
 {
