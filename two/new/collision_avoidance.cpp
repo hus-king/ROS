@@ -61,14 +61,14 @@ void printf();                                                                  
 void printf_param();                                                                 //打印各项参数以供检查
 void collision_avoidance(float target_x,float target_y);
 // 【坐标系旋转函数】- 机体系到enu系
-// input是机体系,output是惯性系，yaw_angle是当前偏航角
+// input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-//接收雷达的数据，并做相应处理,然后计算前后左右四向最小距离
+//接收雷达的数据，并做相应处理,然后最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
     sensor_msgs::LaserScan Laser_tmp;
@@ -398,15 +398,3 @@ void printf_param()
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
 }
-
-
-
-
-
-
-
-
-
-
-
-
