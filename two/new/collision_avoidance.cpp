@@ -293,7 +293,7 @@ void collision_avoidance(float target_x,float target_y)
         distance_cx = distance_c * cos(angle_c/180*3.1415926);
         distance_cy = distance_c * sin(angle_c/180*3.1415926);
 
-        float F_c;
+        float   ;
 
         F_c = 0;
 
@@ -347,9 +347,17 @@ void collision_avoidance(float target_x,float target_y)
         // }
 //hsq02
     }
+//hsq3
+    // 引入随机扰动，避免局部极小值
+    float random_disturbance[2];
+    random_disturbance[0] = ((float)rand() / RAND_MAX - 0.5) * 0.1; // -0.05 到 0.05 之间的随机数
+    random_disturbance[1] = ((float)rand() / RAND_MAX - 0.5) * 0.1;
 
-    vel_sp_body[0] = vel_track[0] + vel_collision[0];
-    vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
+    vel_sp_body[0] = vel_track[0] + vel_collision[0] + random_disturbance[0];
+    vel_sp_body[1] = vel_track[1] + vel_collision[1] + random_disturbance[1];
+    //vel_sp_body[0] = vel_track[0] + vel_collision[0];
+    //vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
+//hsq03
 
     //找当前位置到目标点的xy差值，如果出现其中一个差值小，另一个差值大，
     //且过了一会还是保持这个差值就开始从差值入手。
