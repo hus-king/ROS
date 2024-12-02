@@ -69,7 +69,6 @@ void printf_param();                                                            
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
-void v_rotation(float old[2], float new_v[2], float angle);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -316,6 +315,10 @@ void printf()
     }
     cout << "vel_sp_x : " << vel_sp_ENU[0] << " [m/s] "<<endl;
     cout << "vel_sp_y : " << vel_sp_ENU[1] << " [m/s] "<<endl;
+    cout << "angle_c : " << angle_c << " [du] "<<endl;
+    cout << "target_angle : " << target_angle << " [du] "<<endl;
+    cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
+    cout << "flag_circle : " << flag_circle <<endl;
 }
 
 void printf_param()
@@ -334,26 +337,6 @@ void printf_param()
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
 }
-//hsq
-//angle为角度
-void v_rotation(float old[2], float new_v[2], float angle) {
-    // 计算原始速度的大小
-    float v = sqrt(old[0] * old[0] + old[1] * old[1]);
-
-    // 计算原始速度的方向
-    float alpha = atan2(old[1], old[0]);
-
-    // 将角度从度转换为弧度
-    angle = angle * M_PI / 180.0;
-
-    // 计算旋转后的方向
-    float theta_new = alpha + angle;
-
-    // 计算旋转后的速度分量
-    new_v[0] = v * cos(theta_new);
-    new_v[1] = v * sin(theta_new);
-}
-//hsq0
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
     float angle = target_angle * M_PI / 180.0;
