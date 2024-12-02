@@ -50,6 +50,11 @@ float vel_track_max;                                            //追踪部分�
 int flag_land;                                                  //降落标志位
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
+//hsq
+bool flag_circle;                                               //是否进入圆形避障模式
+float target_angle;                                             //目标角度
+float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度 
+//hsq0
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
 //hsq
@@ -59,13 +64,12 @@ float vel_sp_max;                                               //总速度限�
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
-float satfunc(float data, float Max);
 void printf();                                                                       //打印函数
 void printf_param();                                                                 //打印各项参数以供检查
-void collision_avoidance(float target_x,float target_y);
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
+void v_rotation(float old[2], float new_v[2], float angle);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -221,7 +225,7 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
         ros::spinOnce();
-        collision_avoidance(target_x,target_y);
+        cone_avoidance(target_x,target_y);
 
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
@@ -264,121 +268,29 @@ void cal_min_distance()
         }
     }
 }
-
-//饱和函数
-float satfunc(float data, float Max)
-{
-    if(abs(data)>Max) return ( data > 0 ) ? Max : -Max;
-    else return data;
-}
-
-void collision_avoidance(float target_x,float target_y)
-{
-    //2. 根据最小距离判断：是否启用避障策略
-    if (distance_c >= R_inside )
-    {
-        flag_collision_avoidance.data = false;
-    }
-    else
-    {
-        flag_collision_avoidance.data = true;
-    }
-
-    //3. 计算速度
-    vel_track[0] = p_xy * (target_x - pos_drone.pose.position.x);
-    vel_track[1] = p_xy * (target_y - pos_drone.pose.position.y);
-
-    //速度限幅
-    for (int i = 0; i < 2; i++)
-    {
-        vel_track[i] = satfunc(vel_track[i],vel_track_max);
-    }
-    vel_collision[0]= 0;
-    vel_collision[1]= 0;
-
-    //4. 避障策略
-    if(flag_collision_avoidance.data == true)
-    {
-        distance_cx = distance_c * cos(angle_c/180*3.1415926);
-        distance_cy = distance_c * sin(angle_c/180*3.1415926);
-
-        float F_c = 0;
-
-        if(distance_c > R_inside)
-        {
-            //对速度不做限制
-            vel_collision[0] = vel_collision[0] + 0;
-            vel_collision[1] = vel_collision[1] + 0;
-            cout << " Forward Outside "<<endl;
-        }
-
-
-        //进入圆中开始旋转
-        if(distance_c <= R_inside )
-        {
-            while(1)
-            ROS::spinOnce();
-            alpha=atan2((target_y-pos_drone.pose.position.y),(target_x-pos_drone.pose.position.x));
-            //朝向目标点的角度
-            //angle_c
-            v_rotation(vel_track,vel_collision,angle_c);
-        }
-
-//hsq2
-        //避障速度限幅（需要等比例修改）
-        float vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
-        //取较大
-        if (vel_max > vel_collision_max){
-            for (int i = 0; i < 2; i++)
-            {
-                vel_collision[i] = vel_collision[i] * vel_collision_max / vel_max;
-            }
-        }
-        // for (int i = 0; i < 2; i++)
-        // {
-        //     vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);
-        // }
-//hsq02
-    }
-//hsq3
-    // 引入随机扰动，避免局部极小值
-    float random_disturbance[2];
-    random_disturbance[0] = ((float)rand() / RAND_MAX - 0.5) * 0.1; // -0.05 到 0.05 之间的随机数
-    random_disturbance[1] = ((float)rand() / RAND_MAX - 0.5) * 0.1;
-
-    vel_sp_body[0] = vel_track[0] + vel_collision[0] + random_disturbance[0];
-    vel_sp_body[1] = vel_track[1] + vel_collision[1] + random_disturbance[1];
-    //vel_sp_body[0] = vel_track[0] + vel_collision[0];
-    //vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
-//hsq03
-
-    //找当前位置到目标点的xy差值，如果出现其中一个差值小，另一个差值大，
-    //且过了一会还是保持这个差值就开始从差值入手。
-    //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
-//hsq1
-    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
-    //先转换再计算速度
-    for (int i = 0; i < 2; i++)
-    {
-        vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
-    }
-}
-//hsq01
-
 void cone_avoidance(float target_x,float target_y){
     //2. 根据最小距离判断：是否启用避障策略
-    if (distance_c >= R_outside )
-    {
-        flag_collision_avoidance.data = false;
-    }
-    else
-    {
+    if (distance_c >= R_inside ) flag_collision_avoidance.data = false;
+    else{
         flag_collision_avoidance.data = true;
+        flag_circle = true;
+        //进入圆形避障模式
     }
+    target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
+    colision_tangent_angle = (angle_c + 90)%360;
+    if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
+    else flag_circle = true;
+    //当目标角度与圆的切线相等时退出圆形避障模式
 
-    
+
+    //3. 计算速度
+    if(flag_collision_avoidance.data == true && flag_circle == true){
+        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
+    }
+    else{
+        v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
+    }
 }
-
 void printf()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
@@ -387,20 +299,14 @@ void printf()
     cout << "Angle :    " << angle_c    << " [du] "<<endl;
     cout << "distance_cx :    " << distance_cx    << " [m] "<<endl;
     cout << "distance_cy :    " << distance_cy    << " [m] "<<endl;
-    if(flag_collision_avoidance.data == true)
+    if(flag_collision_avoidance.data == true && flag_circle == true)
     {
-        cout << "Collision avoidance Enabled "<<endl;
+        cout << "Cone avoidance Enabled "<<endl;
     }
     else
     {
         cout << "Collision avoidance Disabled "<<endl;
     }
-    cout << "vel_track_x : " << vel_track[0] << " [m/s] "<<endl;
-    cout << "vel_track_y : " << vel_track[1] << " [m/s] "<<endl;
-
-    cout << "vel_collision_x : " << vel_collision[0] << " [m/s] "<<endl;
-    cout << "vel_collision_y : " << vel_collision[1] << " [m/s] "<<endl;
-
     cout << "vel_sp_x : " << vel_sp_ENU[0] << " [m/s] "<<endl;
     cout << "vel_sp_y : " << vel_sp_ENU[1] << " [m/s] "<<endl;
 }
@@ -415,14 +321,8 @@ void printf_param()
     cout << "R_inside : "<< R_inside << endl;
 
     cout << "p_xy : "<< p_xy << endl;
-    cout << "vel_track_max : "<< vel_track_max << endl;
 
-    cout << "p_R : "<< p_R << endl;
-    cout << "p_r : "<< p_r << endl;
-
-    cout << "vel_collision_max : "<< vel_collision_max << endl;
-
-    cout << "vel_sp_max : "<< vel_sp_max << endl;
+    cout << "vel_sp_ENU_all : "<< vel_sp_ENU_all << endl;
     cout << "range_min : "<< range_min << endl;
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
@@ -447,3 +347,11 @@ void v_rotation(float old[2], float new_v[2], float angle) {
     new_v[1] = v * sin(theta_new);
 }
 //hsq0
+void v_control(float v, float newv[2], float target_angle) {
+    // 将角度从度转换为弧度
+    float angle = target_angle * M_PI / 180.0;
+
+    // 计算新的速度分量
+    newv[0] = v * cos(angle);
+    newv[1] = v * sin(angle);
+}
