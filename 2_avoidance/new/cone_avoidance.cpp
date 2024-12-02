@@ -68,6 +68,7 @@ void printf();                                                                  
 void printf_param();                                                                 //打印各项参数以供检查
 //hsq
 void cone_avoidance(float target_x,float target_y);
+void v_control(float v, float newv[2], float target_angle);
 void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
@@ -150,17 +151,8 @@ int main(int argc, char **argv)
     nh.param<float>("R_inside", R_inside, 1);
 
     nh.param<float>("p_xy", p_xy, 0.5);
-
-    nh.param<float>("vel_track_max", vel_track_max, 0.5);
-
-    nh.param<float>("p_R", p_R, 0.0);
-    nh.param<float>("p_r", p_r, 0.0);
-
-    nh.param<float>("vel_collision_max", vel_collision_max, 0.0);
-    nh.param<float>("vel_sp_max", vel_sp_max, 0.0);
-
-    nh.param<int>("range_min", range_min, 0.0);
-    nh.param<int>("range_max", range_max, 0.0);
+    nh.param<int>("range_min", range_min, 0);
+    nh.param<int>("range_max", range_max, 0);
     nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
     //打印现实检查参数
     printf_param();
@@ -201,19 +193,9 @@ int main(int argc, char **argv)
     if(Take_off_flag != 1) return -1;
 
     //初值
-//hsq 圆锥法控制速度恒定
-    vel_track[0]= 0;
-    vel_track[1]= 0;
-//hsq0
-
-    vel_collision[0]= 0;
-    vel_collision[1]= 0;
-
-    vel_sp_body[0]= 0;
-    vel_sp_body[1]= 0;
-
     vel_sp_ENU[0]= 0;
-    vel_sp_ENU[1]= 0.4;
+    vel_sp_ENU[1]= 0;
+    vel_sp_ENU_all = 0.5;
 
     flag_land = 0;
 
@@ -272,7 +254,6 @@ void cone_avoidance(float target_x,float target_y){
     if (distance_c >= R_inside ) flag_collision_avoidance.data = false;
     else{
         flag_collision_avoidance.data = true;
-        flag_circle = true;
         //进入圆形避障模式
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
@@ -288,7 +269,6 @@ void cone_avoidance(float target_x,float target_y){
     else flag_circle = true;
     //当目标角度与圆的切线相等时退出圆形避障模式
 
-
     //3. 计算速度
     if(flag_collision_avoidance.data == true && flag_circle == true){
         v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
@@ -303,8 +283,6 @@ void printf()
     cout << "Minimun_distance : "<<endl;
     cout << "Distance : " << distance_c << " [m] "<<endl;
     cout << "Angle :    " << angle_c    << " [du] "<<endl;
-    cout << "distance_cx :    " << distance_cx    << " [m] "<<endl;
-    cout << "distance_cy :    " << distance_cy    << " [m] "<<endl;
     if(flag_collision_avoidance.data == true && flag_circle == true)
     {
         cout << "Cone avoidance Enabled "<<endl;
