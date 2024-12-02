@@ -43,6 +43,9 @@ float p_r;                                                      //小圈比例�
 float distance_c,angle_c;                                       //最近障碍物距离 角度
 float distance_cx,distance_cy;                                  //最近障碍物距离XY
 float vel_collision[2];                                         //躲避障碍部分速度
+//hsq
+float vel_collision_ENU[2];                                     //躲避障碍部分世界速度
+//hsq0
 float vel_collision_max;                                        //躲避障碍部分速度限幅
 float p_xy;                                                     //追踪部分位置环P
 float vel_track[2];                                             //追踪部分速度
@@ -353,8 +356,10 @@ void collision_avoidance(float target_x,float target_y)
     random_disturbance[0] = ((float)rand() / RAND_MAX - 0.5) * 0.1; // -0.05 到 0.05 之间的随机数
     random_disturbance[1] = ((float)rand() / RAND_MAX - 0.5) * 0.1;
 
-    vel_sp_body[0] = vel_track[0] + vel_collision[0] + random_disturbance[0];
-    vel_sp_body[1] = vel_track[1] + vel_collision[1] + random_disturbance[1];
+    rotation_yaw(Euler_fcu[2],vel_collision,vel_collision_ENU);
+
+    vel_sp_body[0] = vel_track[0] + vel_collision_ENU[0] + random_disturbance[0];
+    vel_sp_body[1] = vel_track[1] + vel_collision_ENU[1] + random_disturbance[1];
     //vel_sp_body[0] = vel_track[0] + vel_collision[0];
     //vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
 //hsq03
@@ -363,12 +368,20 @@ void collision_avoidance(float target_x,float target_y)
     //且过了一会还是保持这个差值就开始从差值入手。
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
 //hsq1
-    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
-    //先转换再计算速度
-    for (int i = 0; i < 2; i++)
-    {
-        vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
+    float vel_max = (vel_sp_body[0]>=vel_sp_body[1])?vel_sp_body[0]:vel_sp_body[1];
+    //取较大
+    if (vel_max > vel_sp_max){
+        for (int i = 0; i < 2; i++)
+        {
+            vel_sp_body[i] = vel_sp_body[i] * vel_sp_max / vel_max;
+        }
     }
+    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
+
+    // for (int i = 0; i < 2; i++)
+    // {
+    //     vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
+    // }
 }
 //hsq01
 
