@@ -282,11 +282,21 @@ void collision_avoidance(float target_x,float target_y)
     vel_track[0] = p_xy * (target_x - pos_drone.pose.position.x);
     vel_track[1] = p_xy * (target_y - pos_drone.pose.position.y);
 
+//hsq
     //速度限幅
-    for (int i = 0; i < 2; i++)
-    {
-        vel_track[i] = satfunc(vel_track[i],vel_track_max);
+    float vel_max = (vel_track[0]>=vel_track[1])?vel_track[0]:vel_track[1];
+    //取较大
+    if (abs(vel_max) > vel_track_max){
+        for (int i = 0; i < 2; i++)
+        {
+            vel_track[i] = vel_track[i] * vel_track_max / vel_max;
+        }
     }
+    //for (int i = 0; i < 2; i++)
+    //{
+    //    vel_track[i] = satfunc(vel_track[i],vel_track_max);
+    //}
+//hsq0
     vel_collision[0]= 0;
     vel_collision[1]= 0;
 
@@ -296,9 +306,7 @@ void collision_avoidance(float target_x,float target_y)
         distance_cx = distance_c * cos(angle_c/180*3.1415926);
         distance_cy = distance_c * sin(angle_c/180*3.1415926);
 
-        float   ;
-
-        F_c = 0;
+        float F_c = 0;
 
         if(distance_c > R_outside)
         {
@@ -338,7 +346,7 @@ void collision_avoidance(float target_x,float target_y)
         //避障速度限幅（需要等比例修改）
         float vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
         //取较大
-        if (vel_max > vel_collision_max){
+        if (abs(vel_max) > vel_collision_max){
             for (int i = 0; i < 2; i++)
             {
                 vel_collision[i] = vel_collision[i] * vel_collision_max / vel_max;
@@ -370,7 +378,7 @@ void collision_avoidance(float target_x,float target_y)
 //hsq1
     float vel_max = (vel_sp_body[0]>=vel_sp_body[1])?vel_sp_body[0]:vel_sp_body[1];
     //取较大
-    if (vel_max > vel_sp_max){
+    if (abs(vel_max) > vel_sp_max){
         for (int i = 0; i < 2; i++)
         {
             vel_sp_body[i] = vel_sp_body[i] * vel_sp_max / vel_max;
