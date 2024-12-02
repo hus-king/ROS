@@ -372,6 +372,20 @@ void collision_avoidance(float target_x,float target_y)
 }
 //hsq01
 
+void cone_avoidance(float target_x,float target_y){
+    //2. 根据最小距离判断：是否启用避障策略
+    if (distance_c >= R_outside )
+    {
+        flag_collision_avoidance.data = false;
+    }
+    else
+    {
+        flag_collision_avoidance.data = true;
+    }
+
+    
+}
+
 void printf()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
