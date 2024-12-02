@@ -52,6 +52,9 @@ int flag_land;                                                  //降落标志�
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
+//hsq
+float vel_sp_ENU_all;
+//hsq0
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -60,6 +63,10 @@ float satfunc(float data, float Max);
 void printf();                                                                       //打印函数
 void printf_param();                                                                 //打印各项参数以供检查
 void collision_avoidance(float target_x,float target_y);
+//hsq
+void cone_avoidance(float target_x,float target_y);
+void rotation_yaw(float yaw_angle, float input[2], float output[2]);
+//hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
@@ -191,8 +198,10 @@ int main(int argc, char **argv)
     if(Take_off_flag != 1) return -1;
 
     //初值
+//hsq 圆锥法控制速度恒定
     vel_track[0]= 0;
     vel_track[1]= 0;
+//hsq0
 
     vel_collision[0]= 0;
     vel_collision[1]= 0;
@@ -201,7 +210,7 @@ int main(int argc, char **argv)
     vel_sp_body[1]= 0;
 
     vel_sp_ENU[0]= 0;
-    vel_sp_ENU[1]= 0;
+    vel_sp_ENU[1]= 0.4;
 
     flag_land = 0;
 
@@ -266,7 +275,7 @@ float satfunc(float data, float Max)
 void collision_avoidance(float target_x,float target_y)
 {
     //2. 根据最小距离判断：是否启用避障策略
-    if (distance_c >= R_outside )
+    if (distance_c >= R_inside )
     {
         flag_collision_avoidance.data = false;
     }
@@ -275,7 +284,7 @@ void collision_avoidance(float target_x,float target_y)
         flag_collision_avoidance.data = true;
     }
 
-    //3. 计算追踪速度
+    //3. 计算速度
     vel_track[0] = p_xy * (target_x - pos_drone.pose.position.x);
     vel_track[1] = p_xy * (target_y - pos_drone.pose.position.y);
 
@@ -293,11 +302,9 @@ void collision_avoidance(float target_x,float target_y)
         distance_cx = distance_c * cos(angle_c/180*3.1415926);
         distance_cy = distance_c * sin(angle_c/180*3.1415926);
 
-        float   ;
+        float F_c = 0;
 
-        F_c = 0;
-
-        if(distance_c > R_outside)
+        if(distance_c > R_inside)
         {
             //对速度不做限制
             vel_collision[0] = vel_collision[0] + 0;
@@ -305,32 +312,18 @@ void collision_avoidance(float target_x,float target_y)
             cout << " Forward Outside "<<endl;
         }
 
-        //小幅度抑制移动速度
-        if(distance_c > R_inside && distance_c <= R_outside)
-        {
-            F_c = p_R * (R_outside - distance_c);
 
-        }
-
-        //大幅度抑制移动速度
+        //进入圆中开始旋转
         if(distance_c <= R_inside )
         {
-            F_c = p_R * (R_outside - R_inside) + p_r * (R_inside - distance_c);
+            while(1)
+            ROS::spinOnce();
+            alpha=atan2((target_y-pos_drone.pose.position.y),(target_x-pos_drone.pose.position.x));
+            //朝向目标点的角度
+            //angle_c
+            v_rotation(vel_track,vel_collision,angle_c);
         }
 
-        if(distance_cx > 0)
-        {
-            vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
-        }else{
-            vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
-        }
-
-        if(distance_cy > 0)
-        {
-            vel_collision[1] = vel_collision[1] - F_c * distance_cy / distance_c;
-        }else{
-            vel_collision[1] = vel_collision[1] - F_c * distance_cy /distance_c;
-        }
 //hsq2
         //避障速度限幅（需要等比例修改）
         float vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
@@ -434,3 +427,23 @@ void printf_param()
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
 }
+//hsq
+//angle为角度
+void v_rotation(float old[2], float new_v[2], float angle) {
+    // 计算原始速度的大小
+    float v = sqrt(old[0] * old[0] + old[1] * old[1]);
+
+    // 计算原始速度的方向
+    float alpha = atan2(old[1], old[0]);
+
+    // 将角度从度转换为弧度
+    angle = angle * M_PI / 180.0;
+
+    // 计算旋转后的方向
+    float theta_new = alpha + angle;
+
+    // 计算旋转后的速度分量
+    new_v[0] = v * cos(theta_new);
+    new_v[1] = v * sin(theta_new);
+}
+//hsq0
