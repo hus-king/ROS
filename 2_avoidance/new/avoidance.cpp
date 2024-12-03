@@ -123,7 +123,7 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "collision_avoidance");
+    ros::init(argc, argv, "avoidance");
     ros::NodeHandle nh("~");
     // 频率 [20Hz]
     ros::Rate rate(20.0);
@@ -258,7 +258,6 @@ void cal_min_distance()
     }
 }
 
-//饱和函数
 
 
 void collision_avoidance(float target_x,float target_y)
@@ -347,10 +346,7 @@ void collision_avoidance(float target_x,float target_y)
                 vel_collision[i] = vel_collision[i] * vel_collision_max / vel_max;
             }
         }
-        // for (int i = 0; i < 2; i++)
-        // {
-        //     vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);
-        // }
+
 //hsq02
     }
 //hsq3
@@ -361,25 +357,24 @@ void collision_avoidance(float target_x,float target_y)
 
     rotation_yaw(Euler_fcu[2],vel_collision,vel_collision_ENU);
 
-    vel_sp_body[0] = vel_track[0] + vel_collision_ENU[0] + random_disturbance[0];
-    vel_sp_body[1] = vel_track[1] + vel_collision_ENU[1] + random_disturbance[1];
-    //vel_sp_body[0] = vel_track[0] + vel_collision[0];
-    //vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
+    vel_sp_ENU[0] = vel_track[0] + vel_collision_ENU[0] + random_disturbance[0];
+    vel_sp_ENU[1] = vel_track[1] + vel_collision_ENU[1] + random_disturbance[1];
+    //vel_sp_ENU[0] = vel_track[0] + vel_collision[0];
+    //vel_sp_ENU[1] = vel_track[1] + vel_collision[1]; //dyx
 //hsq03
 
     //找当前位置到目标点的xy差值，如果出现其中一个差值小，另一个差值大，
     //且过了一会还是保持这个差值就开始从差值入手。
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
 //hsq1
-    vel_max = (vel_sp_body[0]>=vel_sp_body[1])?vel_sp_body[0]:vel_sp_body[1];
+    vel_max = (vel_sp_ENU[0]>=vel_sp_ENU[1])?vel_sp_ENU[0]:vel_sp_ENU[1];
     //取较大
     if (abs(vel_max) > vel_sp_max){
         for (int i = 0; i < 2; i++)
         {
-            vel_sp_body[i] = vel_sp_body[i] * vel_sp_max / vel_max;
+            vel_sp_ENU[i] = vel_sp_ENU[i] * vel_sp_max / vel_max;
         }
     }
-    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
 
     // for (int i = 0; i < 2; i++)
     // {
