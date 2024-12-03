@@ -59,7 +59,6 @@ float vel_sp_max;                                               //总速度限�
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
-float satfunc(float data, float Max);
 void printf();                                                                       //打印函数
 void printf_param();                                                                 //打印各项参数以供检查
 void collision_avoidance(float target_x,float target_y);
@@ -260,11 +259,7 @@ void cal_min_distance()
 }
 
 //饱和函数
-float satfunc(float data, float Max)
-{
-    if(abs(data)>Max) return ( data > 0 ) ? Max : -Max;
-    else return data;
-}
+
 
 void collision_avoidance(float target_x,float target_y)
 {
@@ -344,7 +339,7 @@ void collision_avoidance(float target_x,float target_y)
         }
 //hsq2
         //避障速度限幅（需要等比例修改）
-        float vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
+        vel_max = (vel_collision[0]>=vel_collision[1])?vel_collision[0]:vel_collision[1];
         //取较大
         if (abs(vel_max) > vel_collision_max){
             for (int i = 0; i < 2; i++)
@@ -376,7 +371,7 @@ void collision_avoidance(float target_x,float target_y)
     //且过了一会还是保持这个差值就开始从差值入手。
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
 //hsq1
-    float vel_max = (vel_sp_body[0]>=vel_sp_body[1])?vel_sp_body[0]:vel_sp_body[1];
+    vel_max = (vel_sp_body[0]>=vel_sp_body[1])?vel_sp_body[0]:vel_sp_body[1];
     //取较大
     if (abs(vel_max) > vel_sp_max){
         for (int i = 0; i < 2; i++)
