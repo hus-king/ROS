@@ -266,18 +266,20 @@ int main(int argc, char **argv)
             }
             break;
         
-        case Arm:
-            if(pos_controller.current_state.mode != "OFFBOARD")
+        case Arm://上电操作。
+            if(pos_controller.current_state.mode != "OFFBOARD")//这个是使得飞机转为电脑控制/
             {
                 cout<<"Please switch to OFFBOARD mode!"<<endl;
                 break;
             }
             if(!pos_controller.current_state.armed)
             {
-                 pos_controller.arm_cmd.request.value = true;
-                 pos_controller.arming_client.call(pos_controller.arm_cmd);
+                 pos_controller.arm_cmd.request.value = true;//request是对飞控的请求
+                 //设置了以后在下面的call发送
+                 pos_controller.arming_client.call(pos_controller.arm_cmd);//arming_client 是一个 ROS 服务客户端，用于向飞控系统的
+                 // arming 服务发送命令。这通常是一个客户端接口，用来与飞控系统的服务进行通信。
             }
-            if (pos_controller.arm_cmd.response.success)
+            if (pos_controller.arm_cmd.response.success)//response是飞控对请求的响应。
             {
                 cout<<"Arm successfully!"<<endl;
                
@@ -300,14 +302,14 @@ int main(int argc, char **argv)
             vel_sp = Eigen::Vector3d(0.0,0.0,0.0);
             accel_sp = pos_controller_pid.pos_controller(pos_controller.pos_drone_fcu, pos_controller.vel_drone_fcu, pos_sp, vel_sp, Command_Now.sub_mode, dt);
 
-            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);
+            pos_controller.send_accel_setpoint(accel_sp, Command_Now.yaw_sp);//
 
             break;
         }
 
         Command_Last = Command_Now;
 
-        rate.sleep();
+        rate.sleep();//rate.sleep() 是与 ros::Rate搭配的，可以让循环以固定时间运行
     }
     return 0;
 }
