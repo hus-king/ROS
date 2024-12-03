@@ -1,0 +1,4 @@
+<launch>
+  <node name="servo_controller_node" type="connect_uav.py" pkg="px4_command" output="screen">
+  </node>
+</launch>

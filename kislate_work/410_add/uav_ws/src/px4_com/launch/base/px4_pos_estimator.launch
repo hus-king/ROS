@@ -1,0 +1,6 @@
+<launch>
+	<!-- run the position_estimator.cpp -->
+	<node pkg="px4_command" type="px4_pos_estimator" name="px4_pos_estimator" output="screen">
+	    <param name="pose_source" type="int" value="1" />
+	</node>
+</launch>
