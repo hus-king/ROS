@@ -129,6 +129,9 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Euler_fcu = quaternion_to_euler(q_fcu);
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
+double mod(double a, double b) {
+    return a - b * floor(a / b);
+}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -258,11 +261,11 @@ void cone_avoidance(float target_x,float target_y){
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     if(angle_c > target_angle) {
-        colision_tangent_angle = (angle_c + 270)%360;
+        colision_tangent_angle = mod(angle_c + 270,360);
         //选取右下方的切线
     }
     else {
-        colision_tangent_angle = (angle_c + 90)%360;
+        colision_tangent_angle = mod(angle_c + 90,360);
         //选取左下方的切线
     }
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
