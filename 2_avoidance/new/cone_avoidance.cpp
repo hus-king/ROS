@@ -51,7 +51,7 @@ int flag_land;                                                  //降落标志�
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 //hsq
-bool flag_circle;                                               //是否进入圆形避障模式
+//bool flag_circle;                                               //是否进入圆形避障模式
 float target_angle;                                             //目标角度
 float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度 
 //hsq0
@@ -265,12 +265,12 @@ void cone_avoidance(float target_x,float target_y){
         colision_tangent_angle = (angle_c + 90)%360;
         //选取左下方的切线
     }
-    if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
-    else flag_circle = true;
+    //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
+    //else flag_circle = true;
     //当目标角度与圆的切线相等时退出圆形避障模式
 
     //3. 计算速度
-    if(flag_collision_avoidance.data == true && flag_circle == true){
+    if(flag_collision_avoidance.data == true){
         v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
     }
     else{
@@ -283,7 +283,7 @@ void printf()
     cout << "Minimun_distance : "<<endl;
     cout << "Distance : " << distance_c << " [m] "<<endl;
     cout << "Angle :    " << angle_c    << " [du] "<<endl;
-    if(flag_collision_avoidance.data == true && flag_circle == true)
+    if(flag_collision_avoidance.data == true )
     {
         cout << "Cone avoidance Enabled "<<endl;
     }
