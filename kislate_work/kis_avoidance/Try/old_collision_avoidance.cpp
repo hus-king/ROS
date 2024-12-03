@@ -44,6 +44,7 @@ float p_r;                                                      //小圈比例�
 float distance_c,angle_c;                                       //最近障碍物距离 角度
 float distance_cx,distance_cy;                                  //最近障碍物距离XY
 float vel_collision[2];                                         //躲避障碍部分速度
+float vel_collision_EMU[2];//世界坐标系下的
 float vel_collision_max;                                        //躲避障碍部分速度限幅
 float p_xy;                                                     //追踪部分位置环P
 float vel_track[2];                                             //追踪部分速度
@@ -51,7 +52,7 @@ float vel_track_max;                                            //追踪部分�
 int flag_land;                                                  //降落标志位
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
-float vel_sp_body[2];                                           //总速度//
+float vel_sp_body[2];                                           //总速度//setpoint--sp
 float vel_sp_ENU[2];                                            //ENU下的总速度
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
@@ -83,7 +84,7 @@ namespace sensor_msgs
 }
 
 */
-void rotation_yaw(float yaw_angle, float input[2], float output[2])
+void rotation_yaw(float yaw_angle, float input[2], float output[2])//input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 {
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
@@ -290,7 +291,7 @@ int main(int argc, char **argv)
     int Arm_flag;
     cout<<"Whether choose to Arm? 1 for Arm, 0 for quit"<<endl;
     cin >> Arm_flag;
-    if(Arm_flag == 1)
+    if(Arm_flag == 1)//上电
     {
         Command_now.command = Arm;
         command_pub.publish(Command_now);
@@ -305,14 +306,14 @@ int main(int argc, char **argv)
     {
         Command_now.command = Takeoff;
         command_pub.publish(Command_now);
-    }
+    }//起飞
     else return -1;
 
     //check start collision_avoid
     int start_flag;
     cout<<"Whether choose to Start mission? 1 for start, 0 for quit"<<endl;
     cin >> start_flag;
-    if(Take_off_flag != 1) return -1;
+    if(Take_off_flag != 1) return -1;//再次检查
 
     //初值
     vel_track[0]= 0;
@@ -336,13 +337,13 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
         ros::spinOnce();
-        collision_avoidance(target_x,target_y);
+        collision_avoidance(target_x,target_y);//这里就是避障程序
 
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
-        comid++;
+        comid++;//用于区分不同的命令，就是个id
         Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
-        Command_now.vel_sp[0] =  vel_sp_ENU[0];
+        Command_now.vel_sp[0] =  vel_sp_ENU[0];  //这堆东西在px4的头文件里都有
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = 0 ;
@@ -355,10 +356,10 @@ int main(int argc, char **argv)
             flag_land = 1;
         }
         if(flag_land == 1) Command_now.command = Land;
-        command_pub.publish(Command_now);
+        command_pub.publish(Command_now);//把以上关于command的所有命令都发送上去，包括速度之类的，还有一个主命令，command
         //打印
         printf();
-        rate.sleep();
+        rate.sleep();//和rate搭配，就是命令刷新速率。
     }
     return 0;
 }
@@ -382,11 +383,24 @@ void cal_min_distance()
 }
 
 //饱和函数
-float satfunc(float data, float Max)//就是计算是否超过最大值
+float satfunc(float data, float Max)//就是计算是否超过最大值//应该同比例缩放
 {
     if(abs(data)>Max) return ( data > 0 ) ? Max : -Max;//abs（）就是定义在标准库cmath中的。
     else return data;
 }
+
+// float satfunc(float *data1,float *data2,float Max)
+// {
+//     float *tmp_vel_max;
+//     float *tmp_vel_min;
+//     tmp_vel_max=abs(*data1>*abs(data2)?(data1):(data2));
+//     tmp_vel_min=abs(*data1>*abs(data2)?(data2):(data1));
+//     *tmp_vel_min=(Max/tmp_vel_max)*(*tmp_vel_min);
+//     *tmp_vel_max=(*tmp_vel_max>0)?Max:-Max;
+//     if(abs(tmp_vel_max)>Max)  
+// }
+
+
 
 void collision_avoidance(float target_x,float target_y)
 {
@@ -441,28 +455,30 @@ void collision_avoidance(float target_x,float target_y)
         if(distance_c <= R_inside )
         {
             F_c = p_R * (R_outside - R_inside) + p_r * (R_inside - distance_c);
-        }
+        }//0.6  1.2
 
         if(distance_cx > 0)
         {
             vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
         }else{
             vel_collision[0] = vel_collision[0] - F_c * distance_cx /distance_c;
-        }
+        }//这两玩意在上面设为0
 
         if(distance_cy > 0)
         {
             vel_collision[1] = vel_collision[1] - F_c * distance_cy / distance_c;
         }else{
             vel_collision[1] = vel_collision[1] - F_c * distance_cy /distance_c;
-        }
+        }//这里也是设为0//if和else什么区别
+
+
         //避障速度限幅
         for (int i = 0; i < 2; i++)
         {
-            vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);
+            vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);//我自己在上面写了个函数。
         }
     }
-
+    rotation_yaw(Euler_fcu[2],vel_collision,vel_collision);
     vel_sp_body[0] = vel_track[0] + vel_collision[0];
     vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
 
@@ -475,6 +491,7 @@ void collision_avoidance(float target_x,float target_y)
         vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
     }
     rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);//这是切换坐标系，但是应该放在速度相加之上。
+    //这里的欧拉角2就是偏转角
 }
 
 void printf()
