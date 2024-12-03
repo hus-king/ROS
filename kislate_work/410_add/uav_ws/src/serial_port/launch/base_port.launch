@@ -1,0 +1,4 @@
+<launch>
+    <node name="base_port" pkg="serial_port" type="base_port" output="screen">
+    </node>
+</launch>

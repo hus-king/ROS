@@ -1,0 +1,20 @@
+##Parameter for vision_track.cpp
+
+##追踪算法比例参数，越大响应越快
+kpy_track : 0.6
+
+##追踪算法最大追踪速度
+##取决与使用场景，室内或者第一次实验时，建议选小一点
+track_max_vel_y : 0.3
+
+##追踪算法速度死区
+track_thres_vel_y : 0.05
+
+##视觉丢失次数阈值
+count_vision_lost : 10
+
+##追踪距离阈值
+distance_thres: 0.4
+
+
+

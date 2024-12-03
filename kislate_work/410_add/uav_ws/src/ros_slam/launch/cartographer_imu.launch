@@ -1,0 +1,20 @@
+<launch>
+
+ <!--<node pkg="tf" type="static_transform_publisher" name="map_camera_odom"
+       args="0 0 0 0 0 0 /map /camera_odom_frame 5" /> -->
+
+  <param name="/use_sim_time" value="flase" />
+
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find ros_slam)/configuration_files
+          -configuration_basename rplidar_imu.lua"
+      output="screen">
+    <remap from="scan" to="scan" />
+    <remap from="odom" to="/camera/odom/sample" />
+    <remap from="/imu" to="/mavros/imu/data" />
+  </node>
+ <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
+</launch>
+

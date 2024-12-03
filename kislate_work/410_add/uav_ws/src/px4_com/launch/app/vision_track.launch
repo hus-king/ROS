@@ -1,0 +1,6 @@
+<launch>
+	<!-- run the vision_track.cpp -->
+	<node pkg="px4_command" type="vision_track" name="vision_track" output="screen">
+                <rosparam command="load" file="$(find px4_command)/config/vision_track.yaml" />
+	</node>
+</launch>

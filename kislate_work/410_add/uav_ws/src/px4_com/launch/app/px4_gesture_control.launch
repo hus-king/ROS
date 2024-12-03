@@ -1,0 +1,6 @@
+<launch>
+	<!-- run the px4_gesture_control.cpp -->
+
+	<node pkg="px4_command" type="px4_gesture_control" name="px4_gesture_control" output="screen">
+	</node>
+</launch>
