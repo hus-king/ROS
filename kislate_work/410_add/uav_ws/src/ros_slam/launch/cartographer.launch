@@ -1,0 +1,12 @@
+<launch>
+  <param name="/use_sim_time" value="flase" />
+
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find ros_slam)/configuration_files
+          -configuration_basename rplidar.lua"
+      output="screen">
+    <remap from="scan" to="scan" />
+  </node>
+</launch>
+

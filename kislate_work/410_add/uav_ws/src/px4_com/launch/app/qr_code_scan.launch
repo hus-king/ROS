@@ -1,0 +1,4 @@
+<launch>
+  <node name="qr_code_scan" type="qr_code_scan.py" pkg="px4_command" output="screen">
+  </node>
+</launch>

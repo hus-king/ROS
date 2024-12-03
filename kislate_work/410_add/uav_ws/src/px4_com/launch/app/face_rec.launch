@@ -1,0 +1,4 @@
+<launch>
+  <node name="face_rec" type="face_rec.py" pkg="px4_command" output="screen">
+  </node>
+</launch>
