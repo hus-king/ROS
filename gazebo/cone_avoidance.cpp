@@ -242,6 +242,7 @@ void cal_min_distance()
 {
     distance_c = Laser.ranges[range_min];
     angle_c = 0;
+    
     for (int i = range_min; i <= range_max; i++)
     {
         if(Laser.ranges[i] < distance_c)
@@ -258,13 +259,18 @@ void cone_avoidance(float target_x,float target_y){
         flag_collision_avoidance.data = true;
         //进入圆形避障模式
     }
+    
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
-    if(angle_c > target_angle) {
-        colision_tangent_angle = mod(angle_c + 270,360);
+    target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
+    if (target_angle < 0) {
+    target_angle += 360.0; // 确保角度在 0 到 360 度范围内
+    }
+    if(angle_c > target_angle-10) {
+        colision_tangent_angle = mod(angle_c + 270,360.0);
         //选取右下方的切线
     }
     else {
-        colision_tangent_angle = mod(angle_c + 90,360);
+        colision_tangent_angle = mod(angle_c + 90,360.0);
         //选取左下方的切线
     }
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;

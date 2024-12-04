@@ -260,7 +260,12 @@ void cone_avoidance(float target_x,float target_y){
         //进入圆形避障模式
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
-    if((angle_c * M_PI / 180.0)> target_angle + 5) {
+    target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
+    if (target_angle < 0) {
+    target_angle += 360.0; // 确保角度在 0 到 360 度范围内
+    }
+    if(angle_c > target_angle-10) {
+        //减去10度，避免反复横跳
         colision_tangent_angle = mod(angle_c + 270,360);
         //选取右下方的切线
     }
@@ -274,7 +279,7 @@ void cone_avoidance(float target_x,float target_y){
 
     //3. 计算速度
     if(flag_collision_avoidance.data == true){
-        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle * M_PI / 180.0);
+        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
@@ -297,7 +302,7 @@ void printf()
     cout << "vel_sp_x : " << vel_sp_ENU[0] << " [m/s] "<<endl;
     cout << "vel_sp_y : " << vel_sp_ENU[1] << " [m/s] "<<endl;
     cout << "angle_c : " << angle_c << " [du] "<<endl;
-    cout << "target_angle : " << target_angle *180/M_PI << " [du] "<<endl;
+    cout << "target_angle : " << target_angle<< " [du] "<<endl;
     cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
     cout << "flag_circle : " << flag_circle <<endl;
 }
@@ -320,7 +325,7 @@ void printf_param()
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
-    // float angle = target_angle * M_PI / 180.0;
+    float angle = target_angle * M_PI / 180.0;
 
     // 计算新的速度分量
     newv[0] = v * cos(target_angle);
