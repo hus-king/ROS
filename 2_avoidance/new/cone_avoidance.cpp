@@ -260,7 +260,7 @@ void cone_avoidance(float target_x,float target_y){
         //进入圆形避障模式
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
-    if((angle_c * M_PI / 180.0)> target_angle) {
+    if((angle_c * M_PI / 180.0)> target_angle + 5) {
         colision_tangent_angle = mod(angle_c + 270,360);
         //选取右下方的切线
     }
