@@ -14,7 +14,7 @@ class pos_controller_PID
     public:
 
         //构造函数
-        pos_controller_PID(void):
+        pos_controller_PID(void)://
             pos_pid_nh("~")
         {
             pos_pid_nh.param<float>("MPC_XY_P", MPC_XY_P, 1.0);
@@ -72,7 +72,6 @@ class pos_controller_PID
 
         //Limitation of the tilt angle (roll and pitch)  [degree]
         float tilt_max;
-
         //Current position and velocity of the drone
         Eigen::Vector3d pos_drone;
         Eigen::Vector3d vel_drone;

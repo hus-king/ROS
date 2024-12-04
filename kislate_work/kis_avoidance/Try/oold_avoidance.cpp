@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 
     nh.param<float>("p_xy", p_xy, 0.5);
 
-    nh.param<float>("vel_track_max", vel_track_max, 0.5);
+    nh.param<float>("vel_track_max", vel_track_max, 0.5);//最大0.5
 
     nh.param<float>("p_R", p_R, 0.0);
     nh.param<float>("p_r", p_r, 0.0);
@@ -289,7 +289,7 @@ void collision_avoidance(float target_x,float target_y)
     if(flag_collision_avoidance.data == true)
     {
         distance_cx = distance_c * cos(angle_c/180*3.1415926);
-        distance_cy = distance_c * sin(angle_c/180*3.1415926);
+        distance_cy = distance_c * sin(angle_c/180*3.1415926);//换算成坐标
 
         float F_c;
 
@@ -301,7 +301,7 @@ void collision_avoidance(float target_x,float target_y)
             vel_collision[0] = vel_collision[0] + 0;
             vel_collision[1] = vel_collision[1] + 0;
             cout << " Forward Outside "<<endl;
-        }
+        }//就是不加速
 
         //小幅度抑制移动速度
         if(distance_c > R_inside && distance_c <= R_outside)
