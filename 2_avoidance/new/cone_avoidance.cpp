@@ -279,7 +279,8 @@ void cone_avoidance(float target_x,float target_y){
 
     //3. 计算速度
     if(flag_collision_avoidance.data == true){
-        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
+        v_control(vel_sp_ENU_all, vel_sp_body, colision_tangent_angle);
+        rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);s
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
