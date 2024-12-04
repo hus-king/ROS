@@ -416,7 +416,7 @@ void collision_avoidance(float target_x,float target_y)
 
     //3. 计算追踪速度
     vel_track[0] = p_xy * (target_x - pos_drone.pose.position.x);
-    vel_track[1] = p_xy * (target_y - pos_drone.pose.position.y);
+    vel_track[1] = p_xy * (target_y - pos_drone.pose.position.y);//世界坐标下的
 
     //速度限幅
     for (int i = 0; i < 2; i++)
@@ -478,10 +478,24 @@ void collision_avoidance(float target_x,float target_y)
             vel_collision[i] = satfunc(vel_collision[i],vel_collision_max);//我自己在上面写了个函数。
         }
     }
-    rotation_yaw(Euler_fcu[2],vel_collision,vel_collision);
-    vel_sp_body[0] = vel_track[0] + vel_collision[0];
-    vel_sp_body[1] = vel_track[1] + vel_collision[1]; //dyx
+//额外添加
+    rotation_yaw(Euler_fcu[2],vel_collision,vel_collision_EMU);
+    vel_sp_EMU[0] = vel_track[0] + vel_collision_EMU[0];
+    vel_sp_EMU[1] = vel_track[1] + vel_collision_EMU[1]; //dyx
 
+/*
+
+
+
+
+这里可以添加hsq的随机扰动。
+
+
+
+
+
+
+*/
     //找当前位置到目标点的xy差值，如果出现其中一个差值小，另一个差值大，
     //且过了一会还是保持这个差值就开始从差值入手。
     //比如，y方向接近0，但x还差很多，但x方向有障碍，这个时候按discx cy的大小，缓解y的难题。
@@ -490,7 +504,7 @@ void collision_avoidance(float target_x,float target_y)
     {
         vel_sp_body[i] = satfunc(vel_sp_body[i],vel_sp_max);
     }
-    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);//这是切换坐标系，但是应该放在速度相加之上。
+    rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);//继续把机体坐标转换为世界坐标
     //这里的欧拉角2就是偏转角
 }
 
