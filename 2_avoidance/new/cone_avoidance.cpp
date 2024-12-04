@@ -304,7 +304,7 @@ void printf()
     cout << "angle_c : " << angle_c << " [du] "<<endl;
     cout << "target_angle : " << target_angle<< " [du] "<<endl;
     cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
-    cout << "flag_circle : " << flag_circle <<endl;
+    // cout << "flag_circle : " << flag_circle <<endl;
 }
 
 void printf_param()
