@@ -69,7 +69,6 @@ void printf_param();                                                            
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
-void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
