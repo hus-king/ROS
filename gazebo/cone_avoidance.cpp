@@ -69,15 +69,16 @@ void printf_param();                                                            
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
-void rotation_yaw(float yaw_angle, float input[2], float output[2]);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
+
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
 }
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -140,6 +141,7 @@ int main(int argc, char **argv)
     // 频率 [20Hz]
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
     ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
@@ -158,6 +160,7 @@ int main(int argc, char **argv)
     nh.param<int>("range_max", range_max, 0);
     nh.param<float>("fly_height", fly_height, 0.5);
     // nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
+
     //打印现实检查参数
     printf_param();
 
@@ -259,18 +262,27 @@ void cone_avoidance(float target_x,float target_y){
         flag_collision_avoidance.data = true;
         //进入圆形避障模式
     }
-    
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
+
+    // angle_c+=(Euler_fcu[2] *180.0 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
+    // if(angle_c >= 360.0){
+    //     angle_c -= 360.0;
+    // }
+    // if(angle_c <0){
+    //     angle_c += 360.0;
+    // }//保证角度在0到360度的范围内
+
     if (target_angle < 0) {
     target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     }
-    if(angle_c > target_angle-10) {
-        colision_tangent_angle = mod(angle_c + 270,360.0);
+    if(angle_c > target_angle-20) {
+        //减去10度，避免反复横跳
+        colision_tangent_angle = mod(angle_c + 270,360);
         //选取右下方的切线
     }
     else {
-        colision_tangent_angle = mod(angle_c + 90,360.0);
+        colision_tangent_angle = mod(angle_c + 90,360);
         //选取左下方的切线
     }
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
@@ -281,7 +293,6 @@ void cone_avoidance(float target_x,float target_y){
     if(flag_collision_avoidance.data == true){
         v_control(vel_sp_ENU_all, vel_sp_body, colision_tangent_angle);
         rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
-
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
@@ -301,12 +312,12 @@ void printf()
     {
         cout << "Collision avoidance Disabled "<<endl;
     }
-    cout << "vel_sp_all : " << vel_sp_ENU_all << " [m/s] "<<endl;
     cout << "vel_sp_x : " << vel_sp_ENU[0] << " [m/s] "<<endl;
     cout << "vel_sp_y : " << vel_sp_ENU[1] << " [m/s] "<<endl;
     cout << "angle_c : " << angle_c << " [du] "<<endl;
-    cout << "target_angle : " << target_angle/M_PI*180 << " [du] "<<endl;
+    cout << "target_angle : " << target_angle<< " [du] "<<endl;
     cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
+    // cout << "flag_circle : " << flag_circle <<endl;
 }
 
 void printf_param()
@@ -327,7 +338,7 @@ void printf_param()
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
-    //float angle = target_angle * M_PI / 180.0;
+    float angle = target_angle * M_PI / 180.0;
 
     // 计算新的速度分量
     newv[0] = v * cos(angle);

@@ -73,11 +73,11 @@ void v_control(float v, float newv[2], float target_angle);
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 
-// void rotation_yaw(float yaw_angle, float input[2], float output[2])
-// {
-//     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
-//     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
-// }
+void rotation_yaw(float yaw_angle, float input[2], float output[2])
+{
+    output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
+    output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
+}
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后最小距离
@@ -110,8 +110,8 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
     for(int i = 0; i < count; i++)
     {
-           if(i+360>719) Laser.ranges[i]=Laser_tmp.ranges[i-360];
-           else Laser.ranges[i]=Laser_tmp.ranges[i+360];
+           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
+           else Laser.ranges[i]=Laser_tmp.ranges[i+180];
            //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
     }
     //cout<<"//////////////"<<endl;
@@ -142,6 +142,7 @@ int main(int argc, char **argv)
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
     ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
@@ -158,6 +159,7 @@ int main(int argc, char **argv)
     nh.param<int>("range_min", range_min, 0);
     nh.param<int>("range_max", range_max, 0);
     nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
+    //nh.param<float>("fly_height", fly_height, 0.5);
     //打印现实检查参数
     printf_param();
 
@@ -243,13 +245,12 @@ void cal_min_distance()
     distance_c = Laser.ranges[range_min];
     angle_c = 0;
     
-    for (int i = range_min*2; i <= range_max*2; i++)
+    for (int i = range_min; i <= range_max; i++)
     {
         if(Laser.ranges[i] < distance_c)
         {
             distance_c = Laser.ranges[i];
-            angle_c = i/2;
-            //angle_c = i;
+            angle_c = i;
         }
     }
 }
@@ -263,18 +264,18 @@ void cone_avoidance(float target_x,float target_y){
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
 
-    angle_c+=(Euler_fcu[2] *180.0 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
-    if(angle_c >= 360.0){
-        angle_c -= 360.0;
-    }
-    if(angle_c <=0){
-        angle_c += 360.0;
-    }//保证角度在0到360度的范围内
+    // angle_c+=(Euler_fcu[2] *180.0 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
+    // if(angle_c >= 360.0){
+    //     angle_c -= 360.0;
+    // }
+    // if(angle_c <0){
+    //     angle_c += 360.0;
+    // }//保证角度在0到360度的范围内
 
     if (target_angle < 0) {
     target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     }
-    if(angle_c > target_angle-10) {
+    if(angle_c > target_angle-20) {
         //减去10度，避免反复横跳
         colision_tangent_angle = mod(angle_c + 270,360);
         //选取右下方的切线
@@ -289,8 +290,8 @@ void cone_avoidance(float target_x,float target_y){
 
     //3. 计算速度
     if(flag_collision_avoidance.data == true){
-        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
-        // rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
+        v_control(vel_sp_ENU_all, vel_sp_body, colision_tangent_angle);
+        rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
@@ -339,6 +340,6 @@ void v_control(float v, float newv[2], float target_angle) {
     float angle = target_angle * M_PI / 180.0;
 
     // 计算新的速度分量
-    newv[0] = v * cos(target_angle);
-    newv[1] = v * sin(target_angle);
+    newv[0] = v * cos(angle);
+    newv[1] = v * sin(angle);
 }
