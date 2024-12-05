@@ -262,8 +262,8 @@ void cone_avoidance(float target_x,float target_y){
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
-    
-    angle_c+=(Euler_fcu[2] *1 80 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
+
+    angle_c+=(Euler_fcu[2] *180 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
     if(angle_c >= 360){
         angle_c -= 360;
     }
