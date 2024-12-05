@@ -72,11 +72,13 @@ void v_control(float v, float newv[2], float target_angle);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
-void rotation_yaw(float yaw_angle, float input[2], float output[2])
-{
-    output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
-    output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
-}
+
+// void rotation_yaw(float yaw_angle, float input[2], float output[2])
+// {
+//     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
+//     output[1] = input[0] * sin(yaw_angle) + input[1] * cos(yaw_angle);
+// }
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -260,6 +262,15 @@ void cone_avoidance(float target_x,float target_y){
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
+    
+    angle_c+=(Euler_fcu[2] *1 80 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
+    if(angle_c >= 360){
+        angle_c -= 360;
+    }
+    if(angle_c <=0){
+        angle_c += 360;
+    }//保证角度在0到360度的范围内
+
     if (target_angle < 0) {
     target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     }
@@ -278,8 +289,8 @@ void cone_avoidance(float target_x,float target_y){
 
     //3. 计算速度
     if(flag_collision_avoidance.data == true){
-        v_control(vel_sp_ENU_all, vel_sp_body, colision_tangent_angle);
-        rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
+        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
+        // rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
