@@ -130,9 +130,6 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Euler_fcu = quaternion_to_euler(q_fcu);
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
-double mod(double a, double b) {
-    return a - b * floor(a / b);
-}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -272,16 +269,21 @@ void cone_avoidance(float target_x,float target_y){
     //     angle_c += 360.0;
     // }//保证角度在0到360度的范围内
 
-    if (target_angle < 0) {
-    target_angle += 360.0; // 确保角度在 0 到 360 度范围内
+    // if (target_angle < 0) {
+    // target_angle += 360.0; // 确保角度在 0 到 360 度范围内
+    // }
+    
+    if (angle_c > 180) {
+    angle_c -= 360.0; // 确保角度在 0 到 360 度范围内
     }
-    if(angle_c > target_angle-20) {
+
+    if(angle_c > target_angle) {
         //减去10度，避免反复横跳
-        colision_tangent_angle = mod(angle_c + 270,360);
+        colision_tangent_angle = angle_c + 270;
         //选取右下方的切线
     }
     else {
-        colision_tangent_angle = mod(angle_c + 90,360);
+        colision_tangent_angle = angle_c + 90;
         //选取左下方的切线
     }
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
