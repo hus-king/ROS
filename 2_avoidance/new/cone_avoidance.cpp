@@ -155,8 +155,8 @@ int main(int argc, char **argv)
     nh.param<float>("p_xy", p_xy, 0.5);
     nh.param<int>("range_min", range_min, 0);
     nh.param<int>("range_max", range_max, 0);
-    nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
-    //nh.param<float>("fly_height", fly_height, 0.5);
+    //nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
+    nh.param<float>("fly_height", fly_height, 0.5);
     //打印现实检查参数
     printf_param();
 
