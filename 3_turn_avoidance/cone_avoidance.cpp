@@ -36,7 +36,7 @@ int range_min;                                                //激光雷达探�
 int range_max;                                                //激光雷达探测范围 最大角度
 float last_time = 0;
 float fly_height;
-float fly_forward = 0.7;
+float fly_forward = 0.8;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -232,7 +232,7 @@ int main(int argc, char **argv)
     	cin >> turn_flag;
   
     float turn_angle=0;
-    while (Euler_fcu[2] * 180.0/M_PI < 90){
+    while (Euler_fcu[2] * 180.0/M_PI > -90){
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = fly_forward;
