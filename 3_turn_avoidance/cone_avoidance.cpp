@@ -66,7 +66,11 @@ px4_command::command Command_now;                               //发送给posit
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 void printf();                                                                       //打印函数
-void printf_param();                                                                 //打印各项参数以供检查
+void printf_param();
+float cal_dis(float x1, float y1, float x2, float y2)
+{
+    return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}                                                                 //打印各项参数以供检查
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
@@ -139,8 +143,8 @@ int main(int argc, char **argv)
     // 频率 [20Hz]
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
@@ -215,7 +219,7 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
-        move_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
         cout << "move forward 0.5~0.8" << endl;
@@ -223,23 +227,27 @@ int main(int argc, char **argv)
         cout << "target = "<<fly_forward<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
-
-    int turn_angle=0;
-    while (turn_angle<90){
+	int turn_flag;
+	cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
+    	cin >> turn_flag;
+  
+    float turn_angle=0;
+    while (Euler_fcu[2] * 180.0/M_PI < 90){
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[0] = fly_forward;
         Command_now.pos_sp[1] = 0;
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = turn_angle;
-        turn_angle++;
+        turn_angle=turn_angle - 0.5 ;
         Command_now.comid = comid;
         comid++;
-        move_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
         cout << "turn 90" << endl;
-        cout << "yaw_angle" << yaw_angle * 180/M_PI <<"du"<<endl;
+        cout << "yaw_angle  " << Euler_fcu[2] * 180.0/M_PI <<"  du"<<endl;
+        cout << "target_angle  " << turn_angle <<"  du"<<endl;
     }
     int avoidance_flag;
     cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
@@ -256,7 +264,7 @@ int main(int argc, char **argv)
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
         comid++;
-        Command_now.sub_mode = 2z; // xy 速度控制模式 z 位置控制模式
+        Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
         Command_now.vel_sp[0] =  vel_sp_ENU[0];
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
