@@ -37,6 +37,7 @@ int range_max;                                                //激光雷达探�
 float last_time = 0;
 float fly_height;
 float fly_forward = 0.8;
+float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
     	cin >> turn_flag;
   
     float turn_angle=0;
-    while (Euler_fcu[2] * 180.0/M_PI > -90){
+    while (Euler_fcu[2] * 180.0/M_PI > fly_turn){
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = fly_forward;
@@ -268,7 +269,7 @@ int main(int argc, char **argv)
         Command_now.vel_sp[0] =  vel_sp_ENU[0];
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
-        Command_now.yaw_sp = 0 ;
+        Command_now.yaw_sp = fly_turn ;
 
         float abs_distance;
         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
@@ -391,6 +392,7 @@ void printf_param()
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
     cout<<"fly forward: "<<fly_forward<<endl;
+    cout<<"fly turn: "<<fly_turn<<endl;
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
