@@ -323,7 +323,7 @@ void cone_avoidance(float target_x,float target_y){
     // if (target_angle < 0) {
     // target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     // }
-    angle_c = angle_c - Euler_fcu[2] * 180.0/M_PI;
+    angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
     if (angle_c > 180) {
         angle_c -= 360.0; // 确保角度在 -180 到 180 度范围内
     }
