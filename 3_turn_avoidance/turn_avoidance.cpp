@@ -56,7 +56,7 @@ std_msgs::Bool flag_collision_avoidance;                       //是否进入避
 //bool flag_circle;                                               //是否进入圆形避障模式
 float target_angle;                                             //目标角度
 float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度
-float collision_angle[2];                                       //两个切线方向
+float colision_angle[2];                                       //两个切线方向
 //hsq0
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
@@ -76,7 +76,7 @@ float cal_dis(float x1, float y1, float x2, float y2)
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
-float normalize_angle(float angle);
+void normalize_angle(float *angle);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -304,25 +304,17 @@ void cal_min_distance()
         }
     }
     angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
-    normalize_angle(angle_c);
+    normalize_angle(&angle_c);
 }
 void cone_avoidance(float target_x,float target_y){
     //2. 根据最小距离判断：是否启用避障策略
     if (distance_c >= R_inside ) flag_collision_avoidance.data = false;
     else{
         flag_collision_avoidance.data = true;
-        //进入圆形避障模式
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
-    // if(angle_c > target_angle) {
-    //     colision_tangent_angle = angle_c - 90;
-    //     //选取右下方的切线
-    // }
-    // else {
-    //     colision_tangent_angle = angle_c + 90;
-    //     //选取左下方的切线
-    // }
+
     colision_angle[0] = angle_c - 90;
     colision_angle[1] = angle_c + 90;
     colision_angle[0] = abs(target_angle - colision_angle[0]);
@@ -331,16 +323,12 @@ void cone_avoidance(float target_x,float target_y){
     if(colision_angle[1] > 180) colision_angle[1] = 360 - colision_angle[1];
     if(colision_angle[0] > colision_angle[1]) colision_tangent_angle = angle_c + 90;
     else colision_tangent_angle = angle_c - 90;
-
-    normalize_angle(colision_tangent_angle);
-    //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
-    //else flag_circle = true;
-    //当目标角度与圆的切线相等时退出圆形避障模式
+    normalize_angle(&colision_tangent_angle);
+    //通过与目标角度比较来选取合适切线角度
 
     //3. 计算速度
     if(flag_collision_avoidance.data == true){
-        v_control(vel_sp_ENU_all, vel_sp_body, colision_tangent_angle);
-        rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
+        v_control(vel_sp_ENU_all, vel_sp_ENU, colision_tangent_angle);
     }
     else{
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
@@ -351,7 +339,7 @@ void printf()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Minimun_distance : "<<endl;
     cout << "Distance : " << distance_c << " [m] "<<endl;
-    cout << "Angle :    " << angle_c    << " [du] "<<endl;
+    cout << "angle_c :    " << angle_c    << " [du] "<<endl;
     if(flag_collision_avoidance.data == true )
     {
         cout << "Cone avoidance Enabled "<<endl;
@@ -368,7 +356,6 @@ void printf()
     cout << "pos_drone : " << pos_drone.pose.position.x << " [m] "<< pos_drone.pose.position.y << " [m] "<< pos_drone.pose.position.z << " [m] "<<endl;
     cout << "target_x : " << target_x << " [m] "<< "target_y : " << target_y << " [m] "<<endl;
     cout << "Euler_fcu : " << Euler_fcu[2] * 180.0/M_PI << " [du] "<<endl;
-    // cout << "flag_circle : " << flag_circle <<endl;
 }
 void printf_param()
 {
@@ -391,18 +378,16 @@ void printf_param()
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
     float angle = target_angle * M_PI / 180.0;
-
     // 计算新的速度分量
     newv[0] = v * cos(angle);
     newv[1] = v * sin(angle);
 }
-float normalize_angle(float angle) {
+void normalize_angle(float *angle) {
     // 将角度调整到 -180 到 180 度范围内
-    while (angle > 180.0) {
-        angle -= 360.0;
+    while (*angle > 180.0) {
+        *angle -= 360.0;
     }
-    while (angle < -180.0) {
-        angle += 360.0;
+    while (*angle < -180.0) {
+        *angle += 360.0;
     }
-    return angle;
 }
