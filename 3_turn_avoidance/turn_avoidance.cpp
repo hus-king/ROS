@@ -322,9 +322,12 @@ void cone_avoidance(float target_x,float target_y){
     // if (target_angle < 0) {
     // target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     // }
-    
+    angle_c = angle_c - Euler_fcu[2] * 180.0/M_PI;
     if (angle_c > 180) {
-    angle_c -= 360.0; // 确保角度在 0 到 360 度范围内
+        angle_c -= 360.0; // 确保角度在 -180 到 180 度范围内
+    }
+    if (angle_c < -180) {
+        angle_c += 360.0; // 确保角度在 -180 到 180 度范围内
     }
 
     if(angle_c > target_angle) {
@@ -368,6 +371,7 @@ void printf()
     cout << "angle_c : " << angle_c << " [du] "<<endl;
     cout << "target_angle : " << target_angle<< " [du] "<<endl;
     cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
+    cout << "pos_drone : " << pos_drone.pose.position.x << " [m] "<< pos_drone.pose.position.y << " [m] "<< pos_drone.pose.position.z << " [m] "<<endl;
     // cout << "flag_circle : " << flag_circle <<endl;
 }
 
