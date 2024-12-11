@@ -55,7 +55,8 @@ std_msgs::Bool flag_collision_avoidance;                       //是否进入避
 //hsq
 //bool flag_circle;                                               //是否进入圆形避障模式
 float target_angle;                                             //目标角度
-float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度 
+float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度
+float collision_angle[2];                                       //两个切线方向
 //hsq0
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
@@ -302,6 +303,8 @@ void cal_min_distance()
             angle_c = i;
         }
     }
+    angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
+    normalize_angle(angle_c);
 }
 void cone_avoidance(float target_x,float target_y){
     //2. 根据最小距离判断：是否启用避障策略
@@ -312,30 +315,23 @@ void cone_avoidance(float target_x,float target_y){
     }
     target_angle = atan2(target_y - pos_drone.pose.position.y, target_x - pos_drone.pose.position.x);
     target_angle = target_angle * 180.0 / M_PI; // 将弧度转换为度数
-
-    // angle_c+=(Euler_fcu[2] *180.0 / M_PI);//将欧拉角转换为角度制，将angle_c转为世界系
-    // if(angle_c >= 360.0){
-    //     angle_c -= 360.0;
+    // if(angle_c > target_angle) {
+    //     colision_tangent_angle = angle_c - 90;
+    //     //选取右下方的切线
     // }
-    // if(angle_c <0){
-    //     angle_c += 360.0;
-    // }//保证角度在0到360度的范围内
-
-    // if (target_angle < 0) {
-    // target_angle += 360.0; // 确保角度在 0 到 360 度范围内
+    // else {
+    //     colision_tangent_angle = angle_c + 90;
+    //     //选取左下方的切线
     // }
-    angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
-    normalize_angle(angle_c);
+    colision_angle[0] = angle_c - 90;
+    colision_angle[1] = angle_c + 90;
+    colision_angle[0] = abs(target_angle - colision_angle[0]);
+    colision_angle[1] = abs(target_angle - colision_angle[1]);
+    if(colision_angle[0] > 180) colision_angle[0] = 360 - colision_angle[0];
+    if(colision_angle[1] > 180) colision_angle[1] = 360 - colision_angle[1];
+    if(colision_angle[0] > colision_angle[1]) colision_tangent_angle = angle_c + 90;
+    else colision_tangent_angle = angle_c - 90;
 
-    if(angle_c > target_angle) {
-        //减去10度，避免反复横跳
-        colision_tangent_angle = angle_c + 270;
-        //选取右下方的切线
-    }
-    else {
-        colision_tangent_angle = angle_c + 90;
-        //选取左下方的切线
-    }
     normalize_angle(colision_tangent_angle);
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
     //else flag_circle = true;
@@ -374,7 +370,6 @@ void printf()
     cout << "Euler_fcu : " << Euler_fcu[2] * 180.0/M_PI << " [du] "<<endl;
     // cout << "flag_circle : " << flag_circle <<endl;
 }
-
 void printf_param()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
