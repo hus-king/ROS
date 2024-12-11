@@ -75,6 +75,7 @@ float cal_dis(float x1, float y1, float x2, float y2)
 //hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
+float normalize_angle(float angle);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -324,12 +325,7 @@ void cone_avoidance(float target_x,float target_y){
     // target_angle += 360.0; // 确保角度在 0 到 360 度范围内
     // }
     angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
-    if (angle_c > 180) {
-        angle_c -= 360.0; // 确保角度在 -180 到 180 度范围内
-    }
-    if (angle_c < -180) {
-        angle_c += 360.0; // 确保角度在 -180 到 180 度范围内
-    }
+    normalize_angle(angle_c);
 
     if(angle_c > target_angle) {
         //减去10度，避免反复横跳
@@ -340,6 +336,7 @@ void cone_avoidance(float target_x,float target_y){
         colision_tangent_angle = angle_c + 90;
         //选取左下方的切线
     }
+    normalize_angle(colision_tangent_angle);
     //if(abs(target_angle - colision_tangent_angle) < 3) flag_circle = false;
     //else flag_circle = true;
     //当目标角度与圆的切线相等时退出圆形避障模式
@@ -373,6 +370,8 @@ void printf()
     cout << "target_angle : " << target_angle<< " [du] "<<endl;
     cout << "colision_tangent_angle : " << colision_tangent_angle << " [du] "<<endl;
     cout << "pos_drone : " << pos_drone.pose.position.x << " [m] "<< pos_drone.pose.position.y << " [m] "<< pos_drone.pose.position.z << " [m] "<<endl;
+    cout << "target_x : " << target_x << " [m] "<< "target_y : " << target_y << " [m] "<<endl;
+    cout << "Euler_fcu : " << Euler_fcu[2] * 180.0/M_PI << " [du] "<<endl;
     // cout << "flag_circle : " << flag_circle <<endl;
 }
 
@@ -401,4 +400,14 @@ void v_control(float v, float newv[2], float target_angle) {
     // 计算新的速度分量
     newv[0] = v * cos(angle);
     newv[1] = v * sin(angle);
+}
+float normalize_angle(float angle) {
+    // 将角度调整到 -180 到 180 度范围内
+    while (angle > 180.0) {
+        angle -= 360.0;
+    }
+    while (angle < -180.0) {
+        angle += 360.0;
+    }
+    return angle;
 }
