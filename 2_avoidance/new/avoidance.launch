@@ -1,5 +1,5 @@
 <launch>
-	<node pkg="px4_command" type="avoidance" name="avoidance" output="screen">
-                <rosparam command="load" file="$(find px4_command)/config/avoidance.yaml" />
+	<node pkg="px4_command" type="3_turn_3_turn_avoidance" name="3_turn_avoidance" output="screen">
+                <rosparam command="load" file="$(find px4_command)/config/3_turn_avoidance.yaml" />
 	</node>
 </launch>
