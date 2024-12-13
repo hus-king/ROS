@@ -37,7 +37,7 @@ int range_max;                                                //激光雷达探�
 float last_time = 0;
 float fly_height;
 float fly_forward = 0.8;
-float fly_turn = -90;
+float fly_turn = 90;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -146,8 +146,8 @@ int main(int argc, char **argv)
     // 频率 [20Hz]
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
     //初值
     vel_sp_ENU[0]= 0;
     vel_sp_ENU[1]= 0;
-    vel_sp_ENU_all = 0.5;
+    vel_sp_ENU_all = 0.2;
 
     flag_land = 0;
 
@@ -235,14 +235,14 @@ int main(int argc, char **argv)
     	cin >> turn_flag;
   
     float turn_angle=0;
-    while (Euler_fcu[2] * 180.0/M_PI > fly_turn){
+    while (Euler_fcu[2] * 180.0/M_PI < fly_turn){
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = fly_forward;
         Command_now.pos_sp[1] = 0;
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = turn_angle;
-        turn_angle=turn_angle - 0.5 ;
+        turn_angle=turn_angle + 1.0 ;
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
