@@ -61,7 +61,7 @@ float colision_angle[2];                                       //两个切线方
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
 //hsq
-float vel_sp_ENU_all;
+float vel_sp_ENU_all = 0.2;
 //hsq0
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     nh.param<float>("target_y", target_y, 0.0); //dyx
 
     nh.param<float>("R_outside", R_outside, 2);
-    nh.param<float>("R_inside", R_inside, 1);
+    nh.param<float>("R_inside", R_inside, 0.6);
 
     nh.param<float>("p_xy", p_xy, 0.5);
     nh.param<int>("range_min", range_min, 0);
@@ -206,7 +206,6 @@ int main(int argc, char **argv)
     //初值
     vel_sp_ENU[0]= 0;
     vel_sp_ENU[1]= 0;
-    vel_sp_ENU_all = 0.2;
 
     flag_land = 0;
 
@@ -230,9 +229,10 @@ int main(int argc, char **argv)
         cout << "target = "<<fly_forward<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
-	int turn_flag;
-	cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
-    	cin >> turn_flag;
+
+	// int turn_flag;
+	// cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
+    // cin >> turn_flag;
   
     float turn_angle=0;
     while (Euler_fcu[2] * 180.0/M_PI < fly_turn){
@@ -252,9 +252,10 @@ int main(int argc, char **argv)
         cout << "yaw_angle  " << Euler_fcu[2] * 180.0/M_PI <<"  du"<<endl;
         cout << "target_angle  " << turn_angle <<"  du"<<endl;
     }
-    int avoidance_flag;
-    cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
-    cin >> avoidance_flag;
+
+    // int avoidance_flag;
+    // cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
+    // cin >> avoidance_flag;
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while (ros::ok())
