@@ -95,7 +95,7 @@ void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
 
 //
-void find_door(float target_x, float target_y);
+void find_door(float target_x, float target_y,int door_flag);
 //
 
 //hsq0
@@ -139,8 +139,8 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     }
     for(int i = 0; i < count; i++)
     {
-           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
-           else Laser.ranges[i]=Laser_tmp.ranges[i+180];
+           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];//180-360
+           else Laser.ranges[i]=Laser_tmp.ranges[i+180];//0-180
            //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
     }
     //cout<<"//////////////"<<endl;
@@ -175,8 +175,9 @@ int main(int argc, char **argv)
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
     //读取参数表中的参数
-    nh.param<float>("target_x", target_x, 1.0); //dyx
-    nh.param<float>("target_y", target_y, 0.0); //dyx
+
+   // nh.param<float>("target_x", target_x, 1.0); //dyx
+   // nh.param<float>("target_y", target_y, 0.0); //dyx
 
     nh.param<float>("R_outside", R_outside, 2);
     nh.param<float>("R_inside", R_inside, 0.6);
@@ -231,12 +232,15 @@ int main(int argc, char **argv)
     flag_land = 0;
 
     int comid = i;
+    int door_flag = 0;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while (ros::ok())
     {
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
+        
         ros::spinOnce();
+        find_door(&target_x,&target_y,door_flag);
         cone_avoidance(target_x,target_y);
 
         Command_now.command = Move_ENU;     //机体系下移动
@@ -349,6 +353,8 @@ void printf_param()
     cout<<"fly heigh: "<<fly_height<<endl;
     cout<<"fly forward: "<<fly_forward<<endl;
     cout<<"fly turn: "<<fly_turn<<endl;
+
+    cout<<"Laser.angle_increment: "<<Laser.angle_increment<<endl;//看一下这个是什么
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
@@ -367,19 +373,73 @@ void normalize_angle(float *angle) {
     }
 }
 
-void find_door(float target_x,float target_y)
+void find_door(float &target_x, float &target_y,int door_flag)
 {
-/*
-    float len_1=0.0;
-    float len_2=0.0;
-*/  
-    int flag_door = 0;
-    for(int i = range_min; i <= range_max; i++)
+    if(door_flag)
     {
-        
+        cout<<"********************"<<endl;
+        cout<<"Door Center: ("<<target_x<<","<<target_y<<")"<<endl;
+        cout<<"********************"<<endl;
     }
 
-    if(flag_door))
+    float left_wall_distance = 0.0;
+    float right_wall_distance = 0.0;
+    float left_wall_angle = 0.0;
+    float right_wall_angle = 0.0;
+    bool left_wall_found = false;
+    bool right_wall_found = false;
+
+    for (int i = range_min; i <= range_max; i++)
+    {
+        if (isinf(Laser.ranges[i]))
+        {
+            continue;
+        }
+
+        float angle = Laser.angle_min + i * Laser.angle_increment;
+        float distance = Laser.ranges[i];
+
+        if (angle < 0 && !left_wall_found)
+        {
+            left_wall_distance = distance * cos(angle);
+            left_wall_angle = angle;
+            left_wall_found = true;
+        }
+        else if (angle > 0 && !right_wall_found)
+        {
+            right_wall_distance = distance * cos(angle);
+            right_wall_angle = angle;
+            right_wall_found = true;
+        }
+
+        if (left_wall_found && right_wall_found)
+        {
+            break;
+        }
+    }
+
+    if (left_wall_found && right_wall_found)
+    {
+        float left_wall_x = left_wall_distance * cos(left_wall_angle);
+        float left_wall_y = left_wall_distance * sin(left_wall_angle);
+        float right_wall_x = right_wall_distance * cos(right_wall_angle);
+        float right_wall_y = right_wall_distance * sin(right_wall_angle);
+
+        float door_center_x = (left_wall_x + right_wall_x) / 2.0;
+        float door_center_y = (left_wall_y + right_wall_y) / 2.0;
+
+        *target_x = door_center_x+drone.pose.position.x+0.5;
+        *target_y = door_center_y+drone.pose.position.y;
+
+        cout << "Door Center: (" << target_x << ", " << target_y << ")" << endl;
+    }
+    else
+    {
+        cout << "No Door Found!" << endl;
+    }
+}
+
+   /* if(flag_door)
     {
         cout<<"********************"<<endl;
         cout<<"Door Center: ("<<target_x<<","<<target_y<<")"<<endl;
@@ -391,7 +451,6 @@ void find_door(float target_x,float target_y)
         cout<<"********************"<<endl;
         return;
     }
-    
     float sum_left_x = 0.0 , sum_left_y =0.0;
     float sum_right_x = 0.0 , sum_right_y =0.0;
     int count_left = 0, count_right = 0;
@@ -434,6 +493,9 @@ void find_door(float target_x,float target_y)
     cout<<"********************"<<endl;
     //cout<<"********************"<<endl;
 }
+
+
+*/
 /*
 void fit_walls_and_find_center()
 {
