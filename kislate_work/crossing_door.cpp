@@ -388,6 +388,8 @@ void find_door(float &target_x, float &target_y,int door_flag)
     float right_wall_angle = 0.0;
     bool left_wall_found = false;
     bool right_wall_found = false;
+    int left_flag = 0;
+    int right_falg = 0;
 
     for (int i = range_min; i <= range_max; i++)
     {
@@ -401,15 +403,41 @@ void find_door(float &target_x, float &target_y,int door_flag)
 
         if (angle < 0 && !left_wall_found)
         {
-            left_wall_distance = distance * cos(angle);
-            left_wall_angle = angle;
-            left_wall_found = true;
+            if (left_flag == 0 || fabs(distance * cos(angle) - left_wall_distance) < 0.1)
+            {
+                left_wall_distance = distance * cos(angle);
+                left_wall_angle = angle;
+                left_wall_found = true;
+                left_flag++;
+                if(left_flag >= 10)
+                {
+                    left_wall_found = true;
+                }
+            }
+            else
+            {
+                left_wall_found = false;
+                left_flag = 0;
+            }
         }
         else if (angle > 0 && !right_wall_found)
         {
-            right_wall_distance = distance * cos(angle);
-            right_wall_angle = angle;
-            right_wall_found = true;
+            if (right_flag == 0 || fabs(distance * cos(angle) - right_wall_distance) < 0.1)
+            {
+                right_wall_distance = distance * cos(angle);
+                right_wall_angle = angle;
+                right_wall_found = true;
+                right_flag++;
+                if(right_flag >= 10)
+                {
+                    right_wall_found = true;
+                }
+            }
+            else
+            {
+                right_wall_found = false;
+                right_flag = 0;
+            }
         }
 
         if (left_wall_found && right_wall_found)
