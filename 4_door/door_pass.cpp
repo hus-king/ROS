@@ -38,6 +38,7 @@ float last_time = 0;
 float fly_height;
 float fly_forward = 0.8;
 float fly_turn = 90;
+float detect_distance = 1.0;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -290,6 +291,25 @@ void cone_avoidance(float target_x,float target_y){
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
     }
 }
+void finddoorcentor(){
+    int length[180];
+    fot(int i=0;i<180;i++){
+        length[i]=Laser.ranges[change(i)];
+    }
+    int door1;
+    int a;
+    for(a=0;a<180;a++){
+        if(length[a]<detect_distance){
+            door1=length[a];
+            break;
+        }
+    }
+    for(int i=a+1;i<180;i++){
+        if(abs(length[i]-door1)<0.1){
+
+        }
+    }
+}
 void printf()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
@@ -346,6 +366,7 @@ void normalize_angle(float *angle) {
     }
 }
 int change(int i){
-    int out = (90-i)%360;
+    int out = 90-i;
+    if(out<0) out+=360;
     return out;
 }

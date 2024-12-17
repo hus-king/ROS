@@ -5,6 +5,9 @@
         "array": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "bitset": "cpp",
+        "algorithm": "cpp",
+        "format": "cpp"
     }
 }
