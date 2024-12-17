@@ -1,4 +1,3 @@
-/*From cone_avoidance&&turn_avoidance*/
 #include <ros/ros.h>
 
 //topic 头文件
@@ -26,6 +25,21 @@ enum Command
     Failsafe_land,
     Idle
 };
+
+
+typedef struct
+{
+    float x;
+    float y;
+} door_center;
+
+typedef struct
+{
+    float left;
+    float right;
+    float angel_l;
+    float angel_r;
+} wall
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -51,21 +65,6 @@ float p_xy;                                                     //追踪部分�
 float vel_track[2];                                             //追踪部分速度
 float vel_track_max;                                            //追踪部分速度限幅
 int flag_land;                                                  //降落标志位
-
-typedef struct
-{
-    float x;
-    float y;
-} door_center;
-
-typedef struct
-{
-    float left;
-    float right;
-    float angel_l;
-    float angel_r;
-} wall
-
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 //hsq
@@ -94,10 +93,7 @@ void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
 
-//
 void find_door(float* target_x, float* target_y,int door_flag);
-//
-
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -132,15 +128,15 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
             }
             else
             {
-                Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];//这里没有该百年range本身的值
+                Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
             }
         }
     
     }
     for(int i = 0; i < count; i++)
     {
-           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];//180-360
-           else Laser.ranges[i]=Laser_tmp.ranges[i+180];//0-180
+           if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
+           else Laser.ranges[i]=Laser_tmp.ranges[i+180];
            //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
     }
     //cout<<"//////////////"<<endl;
@@ -160,6 +156,7 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+int door_flag = 0;
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "collision_avoidance");
@@ -167,17 +164,16 @@ int main(int argc, char **argv)
     // 频率 [20Hz]
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
     //读取参数表中的参数
-
-   // nh.param<float>("target_x", target_x, 1.0); //dyx
-   // nh.param<float>("target_y", target_y, 0.0); //dyx
+    //nh.param<float>("target_x", target_x, 1.0); //dyx
+    //nh.param<float>("target_y", target_y, 0.0); //dyx
 
     nh.param<float>("R_outside", R_outside, 2);
     nh.param<float>("R_inside", R_inside, 0.6);
@@ -232,15 +228,58 @@ int main(int argc, char **argv)
     flag_land = 0;
 
     int comid = 1;
-    int door_flag = 0;
-    target_x = 0;
-    target_y = 0;
+    float abs_distance = 1e5;
+    //第一步，前进0.5~0.8米
+    while (abs_distance > 0.3) {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "move forward 0.5~0.8" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target = "<<fly_forward<< endl;
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
+
+	// int turn_flag;
+	// cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
+    // cin >> turn_flag;
+  
+    float turn_angle=0;
+    while (Euler_fcu[2] * 180.0/M_PI < fly_turn){
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = turn_angle;
+        turn_angle=turn_angle + 1.0 ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "turn 90" << endl;
+        cout << "yaw_angle  " << Euler_fcu[2] * 180.0/M_PI <<"  du"<<endl;
+        cout << "target_angle  " << turn_angle <<"  du"<<endl;
+    }
+
+    // int avoidance_flag;
+    // cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
+    // cin >> avoidance_flag;
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while (ros::ok())
     {
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
-        
         ros::spinOnce();
         find_door(&target_x,&target_y,door_flag);
         cone_avoidance(target_x,target_y);
@@ -252,7 +291,7 @@ int main(int argc, char **argv)
         Command_now.vel_sp[0] =  vel_sp_ENU[0];
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
-        Command_now.yaw_sp = 0 ;
+        Command_now.yaw_sp = fly_turn ;
 
         float abs_distance;
         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
@@ -261,7 +300,7 @@ int main(int argc, char **argv)
             Command_now.command = 3;     //Land
             flag_land = 1;
         }
-        if(flag_land == 1 && door_flag) Command_now.command = Land;
+        if(flag_land == 1) Command_now.command = Land;
         command_pub.publish(Command_now);
         //打印
         printf();
@@ -355,8 +394,7 @@ void printf_param()
     cout<<"fly heigh: "<<fly_height<<endl;
     cout<<"fly forward: "<<fly_forward<<endl;
     cout<<"fly turn: "<<fly_turn<<endl;
-
-    cout<<"Laser.angle_increment: "<<Laser.angle_increment<<endl;//看一下这个是什么
+    //cout<<"Laser.angle_increment: "<<Laser.angle_increment<<endl;//看一下这个是什么
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
@@ -374,6 +412,7 @@ void normalize_angle(float *angle) {
         *angle += 360.0;
     }
 }
+
 
 void find_door(float* target_x, float* target_y,int door_flag)
 {
@@ -400,7 +439,7 @@ void find_door(float* target_x, float* target_y,int door_flag)
             continue;
         }
 
-        float angle = Laser.angle_min + i * Laser.angle_increment;
+        float angle = i;
         float distance = Laser.ranges[i];
 
         if (angle < 0 && !left_wall_found)
@@ -468,107 +507,3 @@ void find_door(float* target_x, float* target_y,int door_flag)
         cout << "No Door Found!" << endl;
     }
 }
-
-   /* if(flag_door)
-    {
-        cout<<"********************"<<endl;
-        cout<<"Door Center: ("<<target_x<<","<<target_y<<")"<<endl;
-        cout<<"********************"<<endl;
-    }
-    else{
-        cout<<"********************"<<endl;
-        cout<<"No Door Found!"<<endl;
-        cout<<"********************"<<endl;
-        return;
-    }
-    float sum_left_x = 0.0 , sum_left_y =0.0;
-    float sum_right_x = 0.0 , sum_right_y =0.0;
-    int count_left = 0, count_right = 0;
-    cout<<"********************"<<endl;
-    distance_c = Laser.ranges[range_min];
-    angle_c = 0;
-    
-    
-    for (int i = range_min; i <= range_max; i++)
-    {
-
-        if(isinf(Laser.ranges[i]))
-        {
-            continue;
-        }
-
-        float x = Laser.ranges[i] * cos(i);
-        float y = Laser.ranges[i] * sin(i);//相对的
-
-        if(i<180)
-        {
-            sum_left_x += x;
-            sum_left_y += y;
-            count_left++;
-        }
-        else
-        {
-            sum_right_x += x;
-            sum_right_y += y;
-            count_right++;
-        }
-    }
-    float left_wall_x = sum_left_x / count_left;
-    float left_wall_y = sum_left_y / count_left;
-    float right_wall_x = sum_right_x / count_right;
-    float right_wall_y = sum_right_y / count_right;
-    cout<<"Left Wall Center: ("<<left_wall_x<<","<<left_wall_y<<")"<<endl;
-    cout<<"Right Wall Center: ("<<right_wall_x<<","<<right_wall_y<<")"<<endl;
-    cout<<"Door Center: ("<<(left_wall_x+right_wall_x)/2<<","<<(left_wall_y+right_wall_y)/2<<")"<<endl;
-    cout<<"********************"<<endl;
-    //cout<<"********************"<<endl;
-}
-
-
-*/
-/*
-void fit_walls_and_find_center()
-{
-    // Variables to store the sum of coordinates for left and right walls
-    float sum_left_x = 0.0, sum_left_y = 0.0;
-    float sum_right_x = 0.0, sum_right_y = 0.0;
-    int count_left = 0, count_right = 0;
-
-    for (int i = range_min; i <= range_max; i++)
-    {
-        float angle = Laser.angle_min + i * Laser.angle_increment;//表示测量点之间的角度增量
-        float distance = Laser.ranges[i];
-
-        if (isinf(distance))
-            continue;
-
-        float x = distance * cos(angle);
-        float y = distance * sin(angle);
-
-        if (angle < 0) 
-        {
-            sum_left_x += x;
-            sum_left_y += y;
-            count_left++;
-        }
-        else 
-        {
-            sum_right_x += x;
-            sum_right_y += y;
-            count_right++;
-        }
-    }
-
-    float left_wall_x = sum_left_x / count_left;
-    float left_wall_y = sum_left_y / count_left;
-    float right_wall_x = sum_right_x / count_right;
-    float right_wall_y = sum_right_y / count_right;
-
-    float center_x = (left_wall_x + right_wall_x) / 2.0;
-    float center_y = (left_wall_y + right_wall_y) / 2.0;
-
-    cout << "Left Wall Center: (" << left_wall_x << ", " << left_wall_y << ")" << endl;
-    cout << "Right Wall Center: (" << right_wall_x << ", " << right_wall_y << ")" << endl;
-    cout << "Door Center: (" << center_x << ", " << center_y << ")" << endl;
-}
-*/
