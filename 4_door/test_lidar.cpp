@@ -195,6 +195,9 @@ void printf()
     for(int i = 0; i < 360; i++)
     {
         cout << "Laser.ranges["<< i <<"] : " << Laser.ranges[i] << " [m] "<<endl;
+        int continue_flag;
+        cout<<"Whether choose to Start test? 1 for continue, 0 for quit"<<endl;
+        cin >> continue_flag;
     }
     
 }
