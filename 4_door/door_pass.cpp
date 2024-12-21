@@ -115,13 +115,12 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
                 Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
             }
         }
-    
     }
     for(int i = 0; i < count; i++)
     {
            if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
            else Laser.ranges[i]=Laser_tmp.ranges[i+180];
-           //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
+           
     }
     //cout<<"//////////////"<<endl;
     //计算前后左右四向最小距离
@@ -291,7 +290,7 @@ void cone_avoidance(float target_x,float target_y){
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
     }
 }
-void finddoorcentor(){
+void finddoorcenter(){
     int length[180];
     fot(int i=0;i<180;i++){
         length[i]=Laser.ranges[change(i)];
@@ -366,7 +365,6 @@ void normalize_angle(float *angle) {
     }
 }
 int change(int i){
-    int out = 90-i;
-    if(out<0) out+=360;
-    return out;
+    if (i<90) return 90-i;
+    else return 450-i;
 }
