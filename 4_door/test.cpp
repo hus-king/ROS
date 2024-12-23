@@ -21,6 +21,7 @@ int doorfind(float height[181]) {
             line[key].length++;
             line[key].end = i + 1;
         } else {
+            line[key].end = i;
             key++;
             line[key].start = i + 1;
         }
