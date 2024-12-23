@@ -96,7 +96,7 @@ int linefind(float height[181]);
 void doorfind();
 int change(int i);
 int key[4] = {-1, -1, -1, -1};
-int door_find_location[2];
+float door_find_location[2];
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -450,7 +450,7 @@ void normalize_angle(float *angle) {
     }
 }
 int change(int i){
-    if (i<90) return 90-i;
+    if (i<=90) return 90-i;
     else return 450-i;
 }
 int linefind(float height[181]) {
@@ -462,7 +462,7 @@ int linefind(float height[181]) {
     line[0].start = 0;
     int key = 0;
     for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.1) {
+        if (minus[i] < 0.2 !isinf(height[i]) {
             line[key].length++;
             line[key].end = i + 1;
         } else {
@@ -478,7 +478,7 @@ void doorfind(){
     float height[181];
     for(int i=0;i<=180;i++){
         length[i]=Laser.ranges[change(i)];
-        height[i]=length[i]*sin(i);
+        height[i]=length[i]*sin(i * M_PI / 180);
     }
     int num_lines = linefind(height);
     int max1 = -1, max2 = -1;
@@ -513,7 +513,7 @@ void doorfind(){
     float world_angle = drone_angle + Euler_fcu[2] * 180.0 / M_PI;  // 将机体系下的角度转换为世界坐标系下的角度
     normalize_angle(&world_angle);   // 将角度调整到 -180 到 180 度范围内
     float y_length = (height[second_largest] + height[third_largest]) / 2.0;
-    float x_length = y_length * tan(drone_angle);
+    float x_length = y_length * tan(drone_angle * M_PI / 180);
     door_find_location[0] = pos_drone.pose.position.x + x_length;
     door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
 }

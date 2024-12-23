@@ -68,7 +68,7 @@ void doorfind();
 int change(int i);
 int key[4] = {-1, -1, -1, -1};
 void normalize_angle(float *angle);
-int door_find_location[2];                                                              //打印各项参数以供检查
+float door_find_location[2];                                                              //打印各项参数以供检查
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后计算前后左右四向最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -163,6 +163,8 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
         ros::spinOnce();
+        cout<<"ok"<<endl;
+        doorfind();
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
         comid++;
@@ -172,8 +174,6 @@ int main(int argc, char **argv)
         Command_now.pos_sp[2] =  0;
         Command_now.yaw_sp = 0 ;
         command_pub.publish(Command_now);
-        //打印
-        door_find_location[0] = pos_drone.pose.position.x;
         rate.sleep();
     }
     return 0;
@@ -227,19 +227,19 @@ void normalize_angle(float *angle) {
     }
 }
 int change(int i){
-    if (i<90) return 90-i;
+    if (i<=90) return 90-i;
     else return 450-i;
 }
 int linefind(float height[181]) {
     float minus[180];
     for (int i = 0; i < 180; i++) {
         minus[i] = abs(height[i] - height[i + 1]);   // 第 i 个点和第 i+1 个点的高度差
-        line[i].length = 1;
+        line[i].length = 1; 
     }
     line[0].start = 0;
     int key = 0;
     for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.1 && !isinf(height[i]) ) {
+    	if (minus[i] < 0.2 && !isinf(height[i]) ) {
             line[key].length++;
             line[key].end = i + 1;
         } else {
@@ -253,9 +253,10 @@ int linefind(float height[181]) {
 void doorfind(){
     float length[181];
     float height[181];
-    fot(int i=0;i<=180;i++){
+    for(int i=0;i<=180;i++){
         length[i]=Laser.ranges[change(i)];
-        height[i]=length[i]*sin(i);
+        height[i]=length[i]*sin(i * M_PI / 180);
+        cout<<i<<" : "<<height[i]<<endl;
     }
     int num_lines = linefind(height);
     int max1 = -1, max2 = -1;
@@ -279,6 +280,9 @@ void doorfind(){
         key[2] = line[max2_index].start;
         key[3] = line[max2_index].end;
     }
+    cout << "Longest lines:" << endl;
+    cout << "Line 1: Start = " << key[0] << ", End = " << key[1] << endl;
+    cout << "Line 2: Start = " << key[2] << ", End = " << key[3] << endl;
     // 对 key 数组进行排序
     std::sort(key, key + 4);
     // 取第二大和第三大的元素
@@ -290,9 +294,9 @@ void doorfind(){
     float world_angle = drone_angle + Euler_fcu[2] * 180.0 / M_PI;  // 将机体系下的角度转换为世界坐标系下的角度
     normalize_angle(&world_angle);   // 将角度调整到 -180 到 180 度范围内
     cout << "world_angle : " << world_angle << " [du] "<<endl;
-    float y_length = (height[second_largest] + height[third_largest]) / 2.0;
-    float x_length = y_length * tan(drone_angle);
-    door_find_location[0] = pos_drone.pose.position.x + x_length;
-    door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
+    float x_length = (height[second_largest] + height[third_largest]) / 2.0;
+    float y_length = x_length * tan(drone_angle * M_PI / 180);
+    door_find_location[0] = pos_drone.pose.position.x + x_length+0.2;
+    door_find_location[1] = pos_drone.pose.position.y + y_length;
     cout << "door_find_location : " << door_find_location[0] << " [m] "<< door_find_location[1] << " [m] "<<endl;
 }
