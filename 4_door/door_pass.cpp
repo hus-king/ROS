@@ -291,23 +291,14 @@ void cone_avoidance(float target_x,float target_y){
     }
 }
 void finddoorcenter(){
-    int length[180];
-    fot(int i=0;i<180;i++){
+    int length[181];
+    int height[181];
+    fot(int i=0;i=180;i++){
         length[i]=Laser.ranges[change(i)];
+        height[i]=length[i]*sin(i);
     }
-    int door1;
-    int a;
-    for(a=0;a<180;a++){
-        if(length[a]<detect_distance){
-            door1=length[a];
-            break;
-        }
-    }
-    for(int i=a+1;i<180;i++){
-        if(abs(length[i]-door1)<0.1){
 
-        }
-    }
+
 }
 void printf()
 {
