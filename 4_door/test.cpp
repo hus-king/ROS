@@ -21,7 +21,6 @@ int doorfind(float height[181]) {
             line[key].length++;
             line[key].end = i + 1;
         } else {
-            line[key].end=i;
             key++;
             line[key].start = i + 1;
         }
@@ -57,6 +56,36 @@ int main() {
     for (int i = 0; i < num_lines; i++) {
         cout << "Line " << i + 1 << ": Start = " << line[i].start << ", End = " << line[i].end << ", Length = " << line[i].length << endl;
     }
+
+    // 选取长度最长的两组并记录 start, end 到 key[4] 中
+    int key[4] = {-1, -1, -1, -1};
+    int max1 = -1, max2 = -1;
+    int max1_index = -1, max2_index = -1;
+
+    for (int i = 0; i < num_lines; i++) {
+        if (line[i].length > max1) {
+            max2 = max1;
+            max2_index = max1_index;
+            max1 = line[i].length;
+            max1_index = i;
+        } else if (line[i].length > max2) {
+            max2 = line[i].length;
+            max2_index = i;
+        }
+    }
+
+    if (max1_index != -1) {
+        key[0] = line[max1_index].start;
+        key[1] = line[max1_index].end;
+    }
+    if (max2_index != -1) {
+        key[2] = line[max2_index].start;
+        key[3] = line[max2_index].end;
+    }
+
+    cout << "Longest lines:" << endl;
+    cout << "Line 1: Start = " << key[0] << ", End = " << key[1] << endl;
+    cout << "Line 2: Start = " << key[2] << ", End = " << key[3] << endl;
 
     return 0;
 }
