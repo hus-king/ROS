@@ -57,10 +57,18 @@ px4_command::command Command_now;                               //发送给posit
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 void printf();                                                                       //打印函数
-void printf_param();                                                                 //打印各项参数以供检查
-
-// 【坐标系旋转函数】- 机体系到enu系
-// input是机体系,output是惯性系，yaw_angle是当前偏航角
+void printf_param();   
+struct doorfind {
+    int start;
+    int end;
+    int length;
+} line[180];
+int linefind(float height[181]);
+void doorfind();
+int change(int i);
+int key[4] = {-1, -1, -1, -1};
+void normalize_angle(float *angle);
+int door_find_location[2];                                                              //打印各项参数以供检查
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后计算前后左右四向最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -70,26 +78,25 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     Laser = *scan;
     int count;
     count = Laser.ranges.size();
-    cout<<"count: "<<count<<endl;
     //剔除inf的情况
-    for(int i = 0; i < count; i++)
-    {
-        //判断是否为inf
-        int a = isinf(Laser_tmp.ranges[i]);
-        //如果为inf，则赋值上一角度的值
-        if(a == 1)
-        {
-            if(i == 0)
-            {
-                Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
-            }
-            else
-            {
-                Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
-            }
-        }
+    // for(int i = 0; i < count; i++)
+    // {
+    //     //判断是否为inf
+    //     int a = isinf(Laser_tmp.ranges[i]);
+    //     //如果为inf，则赋值上一角度的值
+    //     if(a == 1)
+    //     {
+    //         if(i == 0)
+    //         {
+    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
+    //         }
+    //         else
+    //         {
+    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
+    //         }
+    //     }
     
-    }
+    // }
     for(int i = 0; i < count; i++)
     {
            if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
@@ -156,7 +163,6 @@ int main(int argc, char **argv)
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
         ros::spinOnce();
-
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
         comid++;
@@ -167,7 +173,7 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = 0 ;
         command_pub.publish(Command_now);
         //打印
-        printf();
+        door_find_location[0] = pos_drone.pose.position.x;
         rate.sleep();
     }
     return 0;
@@ -187,19 +193,6 @@ void cal_min_distance()
             angle_c = i;
         }
     }
-}
-
-void printf()
-{
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>test_lidar<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    for(int i = 0; i < 360; i++)
-    {
-        cout << "Laser.ranges["<< i <<"] : " << Laser.ranges[i] << " [m] "<<endl;
-        int continue_flag;
-        cout<<"Whether choose to Start test? 1 for continue, 0 for quit"<<endl;
-        cin >> continue_flag;
-    }
-    
 }
 
 void printf_param()
@@ -224,15 +217,82 @@ void printf_param()
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
 }
-
-
-
-
-
-
-
-
-
-
-
-
+void normalize_angle(float *angle) {
+    // 将角度调整到 -180 到 180 度范围内
+    while (*angle > 180.0) {
+        *angle -= 360.0;
+    }
+    while (*angle < -180.0) {
+        *angle += 360.0;
+    }
+}
+int change(int i){
+    if (i<90) return 90-i;
+    else return 450-i;
+}
+int linefind(float height[181]) {
+    float minus[180];
+    for (int i = 0; i < 180; i++) {
+        minus[i] = abs(height[i] - height[i + 1]);   // 第 i 个点和第 i+1 个点的高度差
+        line[i].length = 1;
+    }
+    line[0].start = 0;
+    int key = 0;
+    for (int i = 0; i < 180; i++) {
+        if (minus[i] < 0.1 && !isinf(height[i]) ) {
+            line[key].length++;
+            line[key].end = i + 1;
+        } else {
+            line[key].end = i;
+            key++;
+            line[key].start = i + 1;
+        }
+    }
+    return key + 1; // 返回找到的线段数量
+}
+void doorfind(){
+    float length[181];
+    float height[181];
+    fot(int i=0;i<=180;i++){
+        length[i]=Laser.ranges[change(i)];
+        height[i]=length[i]*sin(i);
+    }
+    int num_lines = linefind(height);
+    int max1 = -1, max2 = -1;
+    int max1_index = -1, max2_index = -1;
+    for (int i = 0; i < num_lines; i++) {
+        if (line[i].length > max1) {
+            max2 = max1;
+            max2_index = max1_index;
+            max1 = line[i].length;
+            max1_index = i;
+        } else if (line[i].length > max2) {
+            max2 = line[i].length;
+            max2_index = i;
+        }
+    }
+    if (max1_index != -1) {
+        key[0] = line[max1_index].start;
+        key[1] = line[max1_index].end;
+    }
+    if (max2_index != -1) {
+        key[2] = line[max2_index].start;
+        key[3] = line[max2_index].end;
+    }
+    // 对 key 数组进行排序
+    std::sort(key, key + 4);
+    // 取第二大和第三大的元素
+    int second_largest = key[2];
+    int third_largest = key[1];
+    // 计算平均数
+    int drone_angle = (second_largest + third_largest) / 2.0;
+    drone_angle = change(drone_angle);
+    float world_angle = drone_angle + Euler_fcu[2] * 180.0 / M_PI;  // 将机体系下的角度转换为世界坐标系下的角度
+    normalize_angle(&world_angle);   // 将角度调整到 -180 到 180 度范围内
+    cout << "world_angle : " << world_angle << " [du] "<<endl;
+    float y_length = (height[second_largest] + height[third_largest]) / 2.0;
+    float x_length = y_length * tan(drone_angle);
+    door_find_location[0] = pos_drone.pose.position.x + x_length;
+    door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
+    cout << "door_find_location : " << door_find_location[0] << " [m] "<< door_find_location[1] << " [m] "<<endl;
+}

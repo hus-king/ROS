@@ -1,3 +1,4 @@
+#include <algorithm> // 添加此头文件以使用 std::sort
 #include <iostream>
 #include <cmath>
 using namespace std;
@@ -7,7 +8,10 @@ struct doorfind {
     int end;
     int length;
 } line[180];
-
+int change(int i){
+    if (i<90) return 90-i;
+    else return 450-i;
+}
 int doorfind(float height[181]) {
     int minus[180];
     for (int i = 0; i < 180; i++) {
@@ -50,19 +54,15 @@ int main() {
         74.25, 74.3, 74.35, 74.4, 74.45, 74.5, 74.55, 74.6, 74.65, 74.7,
         74.75, 74.8, 74.85, 76, 77, 78, 79, 80, 81, 82, 83
     };
-
     int num_lines = doorfind(height);
-
     cout << "Number of lines found: " << num_lines << endl;
     for (int i = 0; i < num_lines; i++) {
         cout << "Line " << i + 1 << ": Start = " << line[i].start << ", End = " << line[i].end << ", Length = " << line[i].length << endl;
     }
-
     // 选取长度最长的两组并记录 start, end 到 key[4] 中
     int key[4] = {-1, -1, -1, -1};
     int max1 = -1, max2 = -1;
     int max1_index = -1, max2_index = -1;
-
     for (int i = 0; i < num_lines; i++) {
         if (line[i].length > max1) {
             max2 = max1;
@@ -74,7 +74,6 @@ int main() {
             max2_index = i;
         }
     }
-
     if (max1_index != -1) {
         key[0] = line[max1_index].start;
         key[1] = line[max1_index].end;
@@ -83,10 +82,17 @@ int main() {
         key[2] = line[max2_index].start;
         key[3] = line[max2_index].end;
     }
-
+    // 对 key 数组进行排序
+    std::sort(key, key + 4);
+    // 取第二大和第三大的元素
+    int second_largest = key[2];
+    int third_largest = key[1];
+    // 计算平均数
+    int center = (second_largest + third_largest) / 2.0;
+    center = change(center);
     cout << "Longest lines:" << endl;
     cout << "Line 1: Start = " << key[0] << ", End = " << key[1] << endl;
     cout << "Line 2: Start = " << key[2] << ", End = " << key[3] << endl;
-
+    cout << "Center: " << center << endl;
     return 0;
 }

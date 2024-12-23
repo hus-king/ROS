@@ -8,6 +8,7 @@
         "span": "cpp",
         "bitset": "cpp",
         "algorithm": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "iostream": "cpp"
     }
 }

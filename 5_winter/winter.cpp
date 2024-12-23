@@ -10,6 +10,7 @@
 #include <cmath>
 #include <stdlib.h>
 #include <math_utils.h>
+#include <algorithm> // 添加此头文件以使用 std::sort
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -37,8 +38,7 @@ int range_max;                                                //激光雷达探�
 float last_time = 0;
 float fly_height;
 float fly_forward = 0.8;
-float fly_turn = 90;
-float detect_distance = 1.0;
+float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -92,12 +92,11 @@ struct doorfind {
     int end;
     int length;
 } line[180];
-int doorfind(float height[181]);
+int linefind(float height[181]);
+void doorfind();
 int change(int i);
 int key[4] = {-1, -1, -1, -1};
-int door_find_location[2];                                         //通过激光雷达检测到的门的位置
-
-
+int door_find_location[2];
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>回 调 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 //接收雷达的数据，并做相应处理,然后最小距离
 void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -125,12 +124,13 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     //             Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
     //         }
     //     }
+    
     // }
     for(int i = 0; i < count; i++)
     {
            if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
            else Laser.ranges[i]=Laser_tmp.ranges[i+180];
-           
+           //cout<<"tmp: "<<i<<" l:"<<Laser_tmp.ranges[i]<<"|| Laser: "<<Laser.ranges[i]<<endl;
     }
     //cout<<"//////////////"<<endl;
     //计算前后左右四向最小距离
@@ -206,6 +206,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
     }
     else return -1;
+    //最好用sleep代替，实现起飞悬停10s
 
     //check start collision_avoid
     int start_flag;
@@ -221,7 +222,98 @@ int main(int argc, char **argv)
 
     int comid = 1;
     float abs_distance = 1e5;
+    //第一步，前进0.5~0.8米
+    while (abs_distance > 0.3) {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "move forward 0.5~0.8" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target = "<<fly_forward<< endl;
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
+    //需要添加悬停
 
+	// int turn_flag;
+	// cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
+    // cin >> turn_flag;
+    //第二步，转90度
+    float turn_angle=0;
+    while (abs(Euler_fcu[2] * 180.0/M_PI - fly_turn)>3){
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = turn_angle;
+        turn_angle=turn_angle + 1.0 ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "turn 90" << endl;
+        cout << "yaw_angle  " << Euler_fcu[2] * 180.0/M_PI <<"  du"<<endl;
+        cout << "target_angle  " << turn_angle <<"  du"<<endl;
+    }
+
+    // int avoidance_flag;
+    // cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
+    // cin >> avoidance_flag;
+    //第三步，穿门
+    ros::spinOnce();
+    doorfind();
+    abs_distance = 1e5;
+    while (abs_distance > 0.1){
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = door_find_location[0];
+        Command_now.pos_sp[1] = pos_drone.pose.position.y;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = turn_angle;
+        turn_angle=turn_angle + 1.0 ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "passing_door_x" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<door_find_location[0]<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y= "<<door_find_location[1]<< endl;
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
+
+    abs_distance = 1e5;
+    while (abs_distance > 0.1){
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = door_find_location[0];
+        Command_now.pos_sp[1] = door_find_location[1];
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = turn_angle;
+        turn_angle=turn_angle + 1.0 ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "passing_door" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<door_find_location[0]<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y= "<<door_find_location[1]<< endl;
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     while (ros::ok())
     {
@@ -300,17 +392,6 @@ void cone_avoidance(float target_x,float target_y){
         v_control(vel_sp_ENU_all, vel_sp_ENU, target_angle);
     }
 }
-void finddoorcenter(){
-    int length[181];
-    int height[181];
-    fot(int i=0;i=180;i++){
-        length[i]=Laser.ranges[change(i)];
-        height[i]=length[i]*sin(i);
-    }
-
-
-
-}
 void printf()
 {
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
@@ -349,6 +430,8 @@ void printf_param()
     cout << "range_min : "<< range_min << endl;
     cout << "range_max : "<< range_max << endl;
     cout<<"fly heigh: "<<fly_height<<endl;
+    cout<<"fly forward: "<<fly_forward<<endl;
+    cout<<"fly turn: "<<fly_turn<<endl;
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
@@ -370,8 +453,8 @@ int change(int i){
     if (i<90) return 90-i;
     else return 450-i;
 }
-int doorfind(float height[181]) {
-    int minus[180];
+int linefind(float height[181]) {
+    float minus[180];
     for (int i = 0; i < 180; i++) {
         minus[i] = abs(height[i] - height[i + 1]);   // 第 i 个点和第 i+1 个点的高度差
         line[i].length = 1;
@@ -389,4 +472,48 @@ int doorfind(float height[181]) {
         }
     }
     return key + 1; // 返回找到的线段数量
+}
+void doorfind(){
+    float length[181];
+    float height[181];
+    for(int i=0;i<=180;i++){
+        length[i]=Laser.ranges[change(i)];
+        height[i]=length[i]*sin(i);
+    }
+    int num_lines = linefind(height);
+    int max1 = -1, max2 = -1;
+    int max1_index = -1, max2_index = -1;
+    for (int i = 0; i < num_lines; i++) {
+        if (line[i].length > max1) {
+            max2 = max1;
+            max2_index = max1_index;
+            max1 = line[i].length;
+            max1_index = i;
+        } else if (line[i].length > max2) {
+            max2 = line[i].length;
+            max2_index = i;
+        }
+    }
+    if (max1_index != -1) {
+        key[0] = line[max1_index].start;
+        key[1] = line[max1_index].end;
+    }
+    if (max2_index != -1) {
+        key[2] = line[max2_index].start;
+        key[3] = line[max2_index].end;
+    }
+    // 对 key 数组进行排序
+    std::sort(key, key + 4);
+    // 取第二大和第三大的元素
+    int second_largest = key[2];
+    int third_largest = key[1];
+    // 计算平均数
+    int drone_angle = (second_largest + third_largest) / 2.0;
+    drone_angle = change(drone_angle);
+    float world_angle = drone_angle + Euler_fcu[2] * 180.0 / M_PI;  // 将机体系下的角度转换为世界坐标系下的角度
+    normalize_angle(&world_angle);   // 将角度调整到 -180 到 180 度范围内
+    float y_length = (height[second_largest] + height[third_largest]) / 2.0;
+    float x_length = y_length * tan(drone_angle);
+    door_find_location[0] = pos_drone.pose.position.x + x_length;
+    door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
 }
