@@ -419,8 +419,9 @@ void find_door(float* target_x, float* target_y,int door_flag)
     if(door_flag)
     {
         cout<<"********************"<<endl;
-        cout<<"Door Center: ("<<target_x<<","<<target_y<<")"<<endl;
+        cout<<"Door Center: ("<<*target_x<<","<<*target_y<<")"<<endl;
         cout<<"********************"<<endl;
+        return;
     }
 
     float left_wall_distance = 0.0;
@@ -441,6 +442,7 @@ void find_door(float* target_x, float* target_y,int door_flag)
 
         float angle = i;
         float distance = Laser.ranges[i];
+        normalize_angle(&angle);
 
         if (angle < 0 && !left_wall_found)
         {
