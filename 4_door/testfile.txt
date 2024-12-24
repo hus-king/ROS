@@ -61,6 +61,7 @@ Laser.ranges[296] : 1.95763 [m]
 Laser.ranges[297] : 1.88648 [m] 
 Laser.ranges[298] : 1.81164 [m] 
 Laser.ranges[299] : 1.77571 [m] 
+
 Laser.ranges[300] : 1.7147 [m] 
 Laser.ranges[301] : 1.66118 [m] 
 Laser.ranges[302] : 1.71178 [m] 

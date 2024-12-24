@@ -278,8 +278,7 @@ int main(int argc, char **argv)
         Command_now.pos_sp[0] = door_find_location[0];
         Command_now.pos_sp[1] = pos_drone.pose.position.y;
         Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = turn_angle;
-        turn_angle=turn_angle + 1.0 ;
+        Command_now.yaw_sp = fly_turn ;
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
@@ -300,8 +299,7 @@ int main(int argc, char **argv)
         Command_now.pos_sp[0] = door_find_location[0];
         Command_now.pos_sp[1] = door_find_location[1];
         Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = turn_angle;
-        turn_angle=turn_angle + 1.0 ;
+        Command_now.yaw_sp = fly_turn ;
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
