@@ -37,7 +37,7 @@ int range_min;                                                //激光雷达探�
 int range_max;                                                //激光雷达探测范围 最大角度
 float last_time = 0;
 float fly_height;
-float fly_forward = 0.8;
+float fly_forward;
 float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
@@ -175,6 +175,7 @@ int main(int argc, char **argv)
     nh.param<int>("range_max", range_max, 0);
     //nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
     nh.param<float>("fly_height", fly_height, 0.5);
+    nh.param<float>("fly_forward", fly_forward, 0.8);
     nh.param<float>("sleep_time", sleep_time, 10.0);
     //打印现实检查参数
     printf_param();
