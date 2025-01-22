@@ -176,7 +176,6 @@ int main(int argc, char **argv)
     //nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
     nh.param<float>("fly_height", fly_height, 0.5);
     nh.param<float>("sleep_time", sleep_time, 10.0);
-    nh.param<float>("height_square", height_square, 0.5);
     //打印现实检查参数
     printf_param();
 
@@ -217,7 +216,7 @@ int main(int argc, char **argv)
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = 0;
         Command_now.pos_sp[1] = 0;
-        Command_now.pos_sp[2] = height_square;
+        Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
@@ -225,6 +224,7 @@ int main(int argc, char **argv)
         rate.sleep();
         cout << "Point 0----->takeoff"<<endl;
         i++;
+        cout <<"i = "<<i<<endl;
     }
 
     //check start collision_avoid
@@ -254,12 +254,28 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
-        cout << "move forward 0.5~0.8" << endl;
+        cout << "Point 1----->move forward" << endl;
         cout << "x = "<<pos_drone.pose.position.x<< endl;
         cout << "target = "<<fly_forward<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
     //需要添加悬停
+    i = 0;
+    while (i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        move_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 1.5----->stay"<<endl;
+        i++;
+    }
 
 	// int turn_flag;
 	// cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
@@ -279,7 +295,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
-        cout << "turn 90" << endl;
+        cout << "Point 2----->turn 90" << endl;
         cout << "yaw_angle  " << Euler_fcu[2] * 180.0/M_PI <<"  du"<<endl;
         cout << "target_angle  " << turn_angle <<"  du"<<endl;
     }
@@ -450,7 +466,6 @@ void printf_param()
     cout<<"fly forward: "<<fly_forward<<endl;
     cout<<"fly turn: "<<fly_turn<<endl;
     cout<<"sleep_time "<<sleep_time<<endl;
-    cout<<"height_square "<<height_square<<endl;
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
