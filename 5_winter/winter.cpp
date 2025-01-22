@@ -53,17 +53,13 @@ float vel_track_max;                                            //追踪部分�
 int flag_land;                                                  //降落标志位
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
-//hsq
-//bool flag_circle;                                               //是否进入圆形避障模式
 float target_angle;                                             //目标角度
 float colision_tangent_angle;                                   //避障圆与目标点连线的切线角度
 float colision_angle[2];                                       //两个切线方向
-//hsq0
 float vel_sp_body[2];                                           //总速度
 float vel_sp_ENU[2];                                            //ENU下的总速度
-//hsq
 float vel_sp_ENU_all = 0.2;
-//hsq0
+float sleep_time;
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -74,11 +70,9 @@ float cal_dis(float x1, float y1, float x2, float y2)
 {
     return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 }                                                                 //打印各项参数以供检查
-//hsq
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
-//hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 
