@@ -175,6 +175,8 @@ int main(int argc, char **argv)
     nh.param<int>("range_max", range_max, 0);
     //nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
     nh.param<float>("fly_height", fly_height, 0.5);
+    nh.param<float>("sleep_time", sleep_time, 10.0);
+    nh.param<float>("height_square", height_square, 0.5);
     //打印现实检查参数
     printf_param();
 
@@ -200,13 +202,30 @@ int main(int argc, char **argv)
     int Take_off_flag;
     cout<<"Whether choose to Takeoff? 1 for Takeoff, 0 for quit"<<endl;
     cin >> Take_off_flag;
-    if(Take_off_flag == 1)
-    {
-        Command_now.command = Takeoff;
-        command_pub.publish(Command_now);
-    }
-    else return -1;
+    // if(Take_off_flag == 1)
+    // {
+    //     Command_now.command = Takeoff;
+    //     command_pub.publish(Command_now);
+    // }
+    // else return -1;
     //最好用sleep代替，实现起飞悬停10s
+    int comid = 0;
+    int i = 0;
+    while (i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = height_square;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        move_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 0----->takeoff"<<endl;
+        i++;
+    }
 
     //check start collision_avoid
     int start_flag;
@@ -220,7 +239,7 @@ int main(int argc, char **argv)
 
     flag_land = 0;
 
-    int comid = 1;
+
     float abs_distance = 1e5;
     //第一步，前进0.5~0.8米
     while (abs_distance > 0.3) {
@@ -430,6 +449,8 @@ void printf_param()
     cout<<"fly heigh: "<<fly_height<<endl;
     cout<<"fly forward: "<<fly_forward<<endl;
     cout<<"fly turn: "<<fly_turn<<endl;
+    cout<<"sleep_time "<<sleep_time<<endl;
+    cout<<"height_square "<<height_square<<endl;
 }
 void v_control(float v, float newv[2], float target_angle) {
     // 将角度从度转换为弧度
