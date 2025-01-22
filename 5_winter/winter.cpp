@@ -150,8 +150,8 @@ int main(int argc, char **argv)
     // 频率 [20Hz]
     ros::Rate rate(20.0);
     //【订阅】Lidar数据
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
     // 【发布】发送给position_control.cpp的命令
@@ -201,12 +201,11 @@ int main(int argc, char **argv)
         Command_now.command = Takeoff;
         command_pub.publish(Command_now);
         cout << "Point 0----->takeoff"<<endl;
-        cout << "z = "<<pos_drone.pose.position.z<<endl;
     }
     else return -1;
-    int stay_flag;
-    cout<<"Whether choose to Stay? 1 for stay, 0 for quit"<<endl;
-    cin >> stat_flag;
+    // int stay_flag;
+    // cout<<"Whether choose to Stay? 1 for stay, 0 for quit"<<endl;
+    // cin >> stay_flag;
     int comid = 0;
     int i = 0;
     sleep_time = sleep_time * 20;
@@ -226,23 +225,23 @@ int main(int argc, char **argv)
     //     cout << "target = "<<fly_height<<endl;
     // }
 
-    while (i < sleep_time)
-    {
-        Command_now.command = Move_ENU;
-        Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = fly_forward;
-        Command_now.pos_sp[1] = 0;
-        Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
-        comid++;
-        command_pub.publish(Command_now);
-        rate.sleep();
-        cout << "Point 0.5----->stay"<<endl;
-        cout << "z = "<<pos_drone.pose.position.z<<endl;
-        cout << "target = "<<fly_height<<endl;
-        i++;
-    }
+    // while (i < sleep_time)
+    // {
+    //     Command_now.command = Move_ENU;
+    //     Command_now.sub_mode = 0;
+    //     Command_now.pos_sp[0] = fly_forward;
+    //     Command_now.pos_sp[1] = 0;
+    //     Command_now.pos_sp[2] = fly_height;
+    //     Command_now.yaw_sp = 0;
+    //     Command_now.comid = comid;
+    //     comid++;
+    //     command_pub.publish(Command_now);
+    //     rate.sleep();
+    //     cout << "Point 0.5----->stay"<<endl;
+    //     cout << "z = "<<pos_drone.pose.position.z<<endl;
+    //     cout << "target = "<<fly_height<<endl;
+    //     i++;
+    // }
 
     //check start collision_avoid
     int start_flag;
@@ -291,6 +290,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 1.5----->stay"<<endl;
+        cout << "i = "<<i<<endl;
         i++;
     }
 
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
         Command_now.pos_sp[1] = 0;
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = turn_angle;
-        turn_angle=turn_angle + 1.0 ;
+        turn_angle=turn_angle - 1.0 ;
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
@@ -317,9 +317,9 @@ int main(int argc, char **argv)
         cout << "target_angle  " << turn_angle <<"  du"<<endl;
     }
 
-    // int avoidance_flag;
-    // cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
-    // cin >> avoidance_flag;
+    int door_flag;
+    cout<<"Whether choose to Start? 1 for start, 0 for quit"<<endl;
+    cin >> door_flag;
     //第三步，穿门
     ros::spinOnce();
     doorfind();
@@ -336,6 +336,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
+        cout << "Point 3----->passing_door" << endl;
         cout << "passing_door_x" << endl;
         cout << "x = "<<pos_drone.pose.position.x<< endl;
         cout << "target_x= "<<door_find_location[0]<< endl;
@@ -343,6 +344,10 @@ int main(int argc, char **argv)
         cout << "target_y= "<<door_find_location[1]<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
+
+    // int avoidance_flag;
+    // cout<<"Whether choose to Start avoidance? 1 for start, 0 for quit"<<endl;
+    // cin >> avoidance_flag;
 
     abs_distance = 1e5;
     while (abs_distance > 0.1){
@@ -365,6 +370,7 @@ int main(int argc, char **argv)
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
     while (ros::ok())
     {
         //回调一次 更新传感器状态
