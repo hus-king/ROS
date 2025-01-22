@@ -204,8 +204,9 @@ int main(int argc, char **argv)
         cout << "z = "<<pos_drone.pose.position.z<<endl;
     }
     else return -1;
-    //最好用sleep代替，实现起飞悬停10s
-    //pos_drone.pose.position.z
+    int stay_flag;
+    cout<<"Whether choose to Stay? 1 for stay, 0 for quit"<<endl;
+    cin >> stat_flag;
     int comid = 0;
     int i = 0;
     sleep_time = sleep_time * 20;
