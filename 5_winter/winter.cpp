@@ -40,14 +40,12 @@ float fly_height;
 float fly_forward;
 float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
-float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
 float p_r;                                                      //小圈比例参数
 float distance_c,angle_c;                                       //最近障碍物距离 角度
 float distance_cx,distance_cy;                                  //最近障碍物距离XY
 float vel_collision[2];                                         //躲避障碍部分速度
 float vel_collision_max;                                        //躲避障碍部分速度限幅
-float p_xy;                                                     //追踪部分位置环P
 float vel_track[2];                                             //追踪部分速度
 float vel_track_max;                                            //追踪部分速度限幅
 int flag_land;                                                  //降落标志位
@@ -160,11 +158,7 @@ int main(int argc, char **argv)
     //读取参数表中的参数
     nh.param<float>("target_x", target_x, 1.0); //dyx
     nh.param<float>("target_y", target_y, 0.0); //dyx
-
-    nh.param<float>("R_outside", R_outside, 2);
     nh.param<float>("R_inside", R_inside, 0.6);
-
-    nh.param<float>("p_xy", p_xy, 0.5);
     nh.param<int>("range_min", range_min, 0);
     nh.param<int>("range_max", range_max, 0);
     //nh.getParam("/px4_pos_controller/Takeoff_height",fly_height);
@@ -476,12 +470,7 @@ void printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "target_x : "<< target_x << endl;
     cout << "target_y : "<< target_y << endl;
-
-    cout << "R_outside : "<< R_outside << endl;
     cout << "R_inside : "<< R_inside << endl;
-
-    cout << "p_xy : "<< p_xy << endl;
-
     cout << "vel_sp_ENU_all : "<< vel_sp_ENU_all << endl;
     cout << "range_min : "<< range_min << endl;
     cout << "range_max : "<< range_max << endl;

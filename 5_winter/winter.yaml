@@ -1,0 +1,23 @@
+##Parameter for collision_avoidance.cpp
+
+fly_height : 0.5
+fly_forward : 1
+height_square : 0.5
+##  期望位置_x;
+target_x : 1
+## 期望位置_y
+target_y : -8
+sleeptime : 10.0
+## 单位:米
+R_outside : 1.0
+## 单位:米
+R_inside : 0.6
+## 追踪部分速度限幅
+vel_track_max : 0.25
+## 避障部分最大速度
+vel_collision_max : 0.30
+## 总速度最大速度
+vel_sp_max : 0.3
+## 激光雷达范围设定
+range_min : 0
+range_max : 359
