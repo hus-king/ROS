@@ -196,33 +196,34 @@ int main(int argc, char **argv)
     int Take_off_flag;
     cout<<"Whether choose to Takeoff? 1 for Takeoff, 0 for quit"<<endl;
     cin >> Take_off_flag;
-    // if(Take_off_flag == 1)
-    // {
-    //     Command_now.command = Takeoff;
-    //     command_pub.publish(Command_now);
-    // }
-    // else return -1;
+    if(Take_off_flag == 1)
+    {
+        Command_now.command = Takeoff;
+        command_pub.publish(Command_now);
+        cout << "Point 0----->takeoff"<<endl;
+        cout << "z = "<<pos_drone.pose.position.z<<endl;
+    }
+    else return -1;
     //最好用sleep代替，实现起飞悬停10s
     //pos_drone.pose.position.z
     int comid = 0;
     int i = 0;
     sleep_time = sleep_time * 20;
-    // while (i < sleep_time)
-    while(abs(pos_drone.pose.position.z - fly_height) > 0.1)
-    {
-        Command_now.command = Move_ENU;
-        Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = 0;
-        Command_now.pos_sp[1] = 0;
-        Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
-        comid++;
-        command_pub.publish(Command_now);
-        cout << "Point 0----->takeoff"<<endl;
-        cout << "z = "<<pos_drone.pose.position.z<<endl;
-        cout << "target = "<<fly_height<<endl;
-    }
+    // while(abs(pos_drone.pose.position.z - fly_height) > 0.1)
+    // {
+    //     Command_now.command = Move_ENU;
+    //     Command_now.sub_mode = 0;
+    //     Command_now.pos_sp[0] = 0;
+    //     Command_now.pos_sp[1] = 0;
+    //     Command_now.pos_sp[2] = fly_height;
+    //     Command_now.yaw_sp = 0;
+    //     Command_now.comid = comid;
+    //     comid++;
+    //     command_pub.publish(Command_now);
+    //     cout << "Point 0----->takeoff"<<endl;
+    //     cout << "z = "<<pos_drone.pose.position.z<<endl;
+    //     cout << "target = "<<fly_height<<endl;
+    // }
 
     while (i < sleep_time)
     {
@@ -237,6 +238,8 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 0.5----->stay"<<endl;
+        cout << "z = "<<pos_drone.pose.position.z<<endl;
+        cout << "target = "<<fly_height<<endl;
         i++;
     }
 
