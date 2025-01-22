@@ -205,6 +205,7 @@ int main(int argc, char **argv)
     //最好用sleep代替，实现起飞悬停10s
     int comid = 0;
     int i = 0;
+    sleep_time = sleep_time * 20;
     while (i < sleep_time)
     {
         Command_now.command = Move_ENU;
