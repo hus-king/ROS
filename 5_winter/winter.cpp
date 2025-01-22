@@ -219,12 +219,9 @@ int main(int argc, char **argv)
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
-        rate.sleep();
         cout << "Point 0----->takeoff"<<endl;
         cout << "z = "<<pos_drone.pose.position.z<<endl;
         cout << "target = "<<fly_height<<endl;
-        i++;
-        cout <<"i = "<<i<<endl;
     }
 
     while (i < sleep_time)
