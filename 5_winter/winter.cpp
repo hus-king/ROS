@@ -215,7 +215,7 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
-        move_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 0----->takeoff"<<endl;
         i++;
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
-        move_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 1.5----->stay"<<endl;
         i++;
