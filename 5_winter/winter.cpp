@@ -491,7 +491,7 @@ int linefind(float height[181]) {
     line[0].start = 0;
     int key = 0;
     for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.2 !isinf(height[i]) {
+        if (minus[i] < 0.2 && !isinf(height[i]) {
             line[key].length++;
             line[key].end = i + 1;
         } else {
