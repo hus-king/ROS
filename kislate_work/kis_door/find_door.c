@@ -8,6 +8,9 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/LaserScan.h>
 #include <cmath>
+
+#include <vector>
+
 #include <stdlib.h>
 #include <math_utils.h>
 #include <openssl/ssl.h>
@@ -28,19 +31,25 @@ enum Command
     Idle
 };
 
-typedef struct
-{
-    float x;
-    float y;
-} door_center;
+// typedef struct
+// {
+//     float x;
+//     float y;
+// } door_center;
 
-typedef struct
-{
-    float left;
-    float right;
-    float angel_l;
-    float angel_r;
-} wall;
+// typedef struct
+// {
+//     float left;
+//     float right;
+//     float angel_l;
+//     float angel_r;
+// } wall;
+
+struct WallLine {
+    float angle;        // 线段平均角度（弧度）
+    float distToOrigin; // 距原点距离（拦截）
+    float x1, y1, x2, y2; // 线段起终点
+};
 
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
@@ -95,6 +104,9 @@ void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
 void finddoor(float target_x,float target_y);
+bool isParallelOrSameLine(float angle1, float angle2, float eps = 0.1f); 
+bool isPerpendicular(float angle1, float angle2, float eps = 0.1f);
+WallLine fitWallSegment(const std::vector<std::pair<float, float>>& seg);
 //hsq0
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
@@ -192,7 +204,7 @@ int main(int argc, char **argv)
 
     //check arm
     int Arm_flag;
-    cout<<"Whether choose to Arm? 1 for Arm, 0 for quit"<<endl;
+    cout<<"Whether to start test?"<<endl;
     cin >> Arm_flag;
     if(Arm_flag == 1)
     {
@@ -268,113 +280,293 @@ void normalize_angle(float *angle) {
 }
 
 
-//只找一次门
+// //只找一次门
+// void find_door(float* target_x, float* target_y, int door_flag)
+// {
+//     if (door_flag)
+//     {
+//         cout << "********************" << endl;
+//         cout << "Door Center: (" << *target_x << "," << *target_y << ")" << endl;
+//         cout << "********************" << endl;
+//         return;
+//     }
+
+//     float temp_distance = 0.0;
+
+//     float left_wall_angle = 0.0;
+//     float right_wall_angle = 0.0;
+//     bool left_wall_found = false;
+//     bool right_wall_found = false;
+//     int left_flag = 0;
+//     int right_flag = 0;
+//     float distance_threshold[2] = {0.1,0.3}; //与墙距离的误差阈值
+//     for (int i = range_min; i <= range_max; i++)
+//     {
+//         float right_wall_distance = 0.0;
+//         float left_wall_distance = 0.0;
+
+//         int inf_flag = 0;
+//         if (isinf(Laser.ranges[i]))
+//         {
+//             inf_flag = 1;
+//         }
+//         else if(inf_flag)
+//         {
+//             continue;
+//         }
+
+//         float angle = i;
+//         float distance = Laser.ranges[i];//这里的i在lidar处理的时候已经处理过了
+//         normalize_angle(&angle);
+
+
+//         if (angle > 0 && !right_wall_found)
+//         {
+//             if (right_flag == 0 || fabs(distance * cos(angle) - right_wall_distance) < distance_threshold)
+//             {
+//                 right_wall_distance = distance * cos(angle);
+//                 right_wall_angle = angle;
+//                 right_wall_found = true;
+//                 right_flag++;
+//                 if (right_flag >= 50 && inf_flag)
+//                 {
+//                     right_wall_found = true;
+//                 }
+//             }
+//             else
+//             {
+//                 right_wall_found = false;
+//                 right_flag = 0;
+//             }
+//         }
+
+
+//         if (angle < 0 && !left_wall_found && right_wall_found)
+//         {
+
+//             if (left_flag == 0 || fabs(distance * cos(angle) - left_wall_distance) < distance_threshold)
+//             {
+//                 left_wall_distance = distance * cos(angle);
+//                 left_wall_angle = angle;//
+//                 left_wall_found = true;
+//                 left_flag++;
+//                 if (left_flag >= 50)
+//                 {
+//                     left_wall_found = true;
+//                 }
+//             }
+//             else
+//             {
+//                 left_wall_found = false;
+//                 left_flag = 0;
+//             }
+//         }
+
+//         if (left_wall_found && right_wall_found)
+//         {
+//             break;
+//         }
+//     }
+
+//     if (left_wall_found && right_wall_found)
+//     {
+//         float left_wall_x = left_wall_distance * cos(left_wall_angle);
+//         float left_wall_y = left_wall_distance * sin(left_wall_angle);
+//         float right_wall_x = right_wall_distance * cos(right_wall_angle);
+//         float right_wall_y = right_wall_distance * sin(right_wall_angle);
+
+//         float door_center_x = (left_wall_x + right_wall_x) / 2.0;
+//         float door_center_y = (left_wall_y + right_wall_y) / 2.0;
+
+//         *target_x = door_center_x + pos_drone.pose.position.x + 0.5;
+//         *target_y = door_center_y + pos_drone.pose.position.y;
+
+//         cout << "********************" << endl;
+//         cout << "temp_distance: " << temp_distance << endl;
+//         cout << "Left_wall_distance: " << left_wall_distance << endl;
+//         cout << "Right_wall_distance: " << right_wall_distance << endl;
+//         cout << "Left Wall: (" << left_wall_x << ", " << left_wall_y << ")" << endl;
+//         cout << "Right Wall: (" << right_wall_x << ", " << right_wall_y << ")" << endl;
+//         cout << "Door Center: (" << *target_x << ", " << *target_y << ")" << endl;
+//     }
+//     else
+//     {
+//         if(left_flag)
+//             cout<<"Left_door is found!"<< endl;
+//         else if(right_flag)
+//             cout<<"Right_door is found!"<<end l;
+//         cout << "No Door Found!" << endl;
+//     }
+// }
+
+// //下面可以考虑吧增加hsq所说的映射
+// //////////////BEGIN/////////////
+
+
+
+// //////////////END///////////////
+
+
+// bool isParallelOrSameLine(float angle1, float angle2, float eps = 0.1f) {
+
+//     float diff = fabs(angle1 - angle2);
+//     return (diff < eps || fabs(diff - (float)M_PI) < eps);
+// }
+
+// bool isPerpendicular(float angle1, float angle2, float eps = 0.1f) {
+
+//     float diff = fabs(angle1 - (angle2 + M_PI_2));
+//     return diff < eps || fabs(diff - (float)M_PI) < eps;
+// }
+
+
+
+// WallLine fitWallSegment(const std::vector<std::pair<float, float>>& seg) {
+
+//     float sumx = 0, sumy = 0;
+//     for(auto &p : seg){
+//         sumx += p.second * cos(p.first);
+//         sumy += p.second * sin(p.first);
+//     }
+//     float cx = sumx / seg.size();
+//     float cy = sumy / seg.size();
+//     WallLine w{};
+//     w.angle = atan2(cy, cx);
+//     w.distToOrigin = sqrt(cx*cx + cy*cy);
+//     // 这里可进一步计算x1,y1,x2,y2
+//     return w;
+// }
+
+// bool checkDoor(const WallLine &w1, const WallLine &w2, float *cx, float *cy) {
+//     // 判断同线或垂直，且中间空缺足够
+
+//     if(isParallelOrSameLine(w1.angle, w2.angle) || isPerpendicular(w1.angle, w2.angle)) {
+//         // 假设两线距离足够成为门
+//         float dx = (w1.distToOrigin + w2.distToOrigin)/2.0f * cos((w1.angle + w2.angle)/2.0f);
+//         float dy = (w1.distToOrigin + w2.distToOrigin)/2.0f * sin((w1.angle + w2.angle)/2.0f);
+//         *cx = dx; 
+//         *cy = dy;
+//         return true;
+//     }
+//     return false;
+// }
+
+
+
+// void find_door(float* target_x, float* target_y, int door_flag)
+// {
+//     if (door_flag)
+//     {
+//         cout << "********************" << endl;
+//         cout << "Door Center: (" << *target_x << "," << *target_y << ")" << endl;
+//         cout << "********************" << endl;
+//         return;
+//     }
+
+    
+//     std::vector<WallLine> lines; 
+//     // for each segment { lines.push_back(fitWallSegment(segment)); }
+    
+//     // 2. 遍历所有线段，寻找门
+//     bool doorFound = false;
+//     for(size_t i=0; i<lines.size(); i++){
+//         for(size_t j=i+1; j<lines.size(); j++){
+//             float cx=0, cy=0;
+//             if(checkDoor(lines[i], lines[j], &cx, &cy)){
+//                 // 找到满足门条件的两条线，计算门中心
+//                 *target_x = cx + pos_drone.pose.position.x;
+//                 *target_y = cy + pos_drone.pose.position.y;
+//                 cout << "********************" << endl;
+//                 cout << "Door Center: (" << *target_x << ", " << *target_y << ")" << endl;
+//                 doorFound = true;
+//                 break;
+//             }
+//         }
+//         if(doorFound) break;
+//     }
+
+//     if(!doorFound) {
+//         cout << "No Door Found!" << endl;
+//     }
+// }
+
+bool isParallelOrSameLine(float angle1, float angle2, float eps = 0.1f) {
+    float diff = fabs(angle1 - angle2);
+    return (diff < eps || fabs(diff - (float)M_PI) < eps);
+}
+
+bool isPerpendicular(float angle1, float angle2, float eps = 0.1f) {
+    float diff = fabs(angle1 - (angle2 + M_PI_2));
+    return diff < eps || fabs(diff - (float)M_PI) < eps;
+}
+
+WallLine fitWallSegment(const std::vector<std::pair<float, float>>& seg) {
+    float sumx = 0, sumy = 0;
+    for(auto &p : seg){
+        sumx += p.second * cos(p.first);
+        sumy += p.second * sin(p.first);
+    }
+    float cx = sumx / seg.size();
+    float cy = sumy / seg.size();
+    WallLine w{};
+    w.angle = atan2(cy, cx);
+    w.distToOrigin = sqrt(cx*cx + cy*cy);
+    // 这里可进一步计算x1,y1,x2,y2
+    return w;
+}
+
+
+bool checkDoor(const WallLine &w1, const WallLine &w2, float *cx, float *cy) {
+    if(isParallelOrSameLine(w1.angle, w2.angle) || isPerpendicular(w1.angle, w2.angle)) {
+        float dx = (w1.distToOrigin + w2.distToOrigin)/2.0f * cos((w1.angle + w2.angle)/2.0f);
+        float dy = (w1.distToOrigin + w2.distToOrigin)/2.0f * sin((w1.angle + w2.angle)/2.0f);
+        *cx = dx; 
+        *cy = dy;
+        return true;
+    }
+    return false;
+}
+
 void find_door(float* target_x, float* target_y, int door_flag)
 {
     if (door_flag)
     {
-        cout << "********************" << endl;
-        cout << "Door Center: (" << *target_x << "," << *target_y << ")" << endl;
-        cout << "********************" << endl;
+        std::cout << "********************" << std::endl;
+        std::cout << "Door Center: (" << *target_x << "," << *target_y << ")" << std::endl;
+        std::cout << "********************" << std::endl;
         return;
     }
 
-    float left_wall_distance = 0.0;
-    float right_wall_distance = 0.0;
-    float left_wall_angle = 0.0;
-    float right_wall_angle = 0.0;
-    bool left_wall_found = false;
-    bool right_wall_found = false;
-    int left_flag = 0;
-    int right_flag = 0;
-    float distance_threshold = 0.5; // 距离阈值，用于判断是否是同一面墙的两个边缘
-
-    for (int i = range_min; i <= range_max; i++)
-    {
-        if (isinf(Laser.ranges[i]))
-        {
-            continue;
-        }
-
-        float angle = i;
-        float distance = Laser.ranges[i];
-        normalize_angle(&angle);
-
-        if (angle < 0 && !left_wall_found)
-        {
-            if (left_flag == 0 || fabs(distance * cos(angle) - left_wall_distance) < distance_threshold)
-            {
-                left_wall_distance = distance * cos(angle);
-                left_wall_angle = angle;
-                left_wall_found = true;
-                left_flag++;
-                if (left_flag >= 10)
-                {
-                    left_wall_found = true;
-                }
-            }
-            else
-            {
-                left_wall_found = false;
-                left_flag = 0;
-            }
-        }
-        else if (angle > 0 && !right_wall_found)
-        {
-            if (right_flag == 0 || fabs(distance * cos(angle) - right_wall_distance) < distance_threshold)
-            {
-                right_wall_distance = distance * cos(angle);
-                right_wall_angle = angle;
-                right_wall_found = true;
-                right_flag++;
-                if (right_flag >= 10)
-                {
-                    right_wall_found = true;
-                }
-            }
-            else
-            {
-                right_wall_found = false;
-                right_flag = 0;
-            }
-        }
-
-        if (left_wall_found && right_wall_found)
-        {
-            break;
+    std::vector<std::pair<float, float>> laser_data;
+    for (int i = range_min; i <= range_max; i++) {
+        if (!isinf(Laser.ranges[i])) {
+            float angle = i; 
+            float distance = Laser.ranges[i];
+            normalize_angle(&angle);
+            laser_data.emplace_back(angle, distance);
         }
     }
 
-    if (left_wall_found && right_wall_found)
-    {
-        float left_wall_x = left_wall_distance * cos(left_wall_angle);
-        float left_wall_y = left_wall_distance * sin(left_wall_angle);
-        float right_wall_x = right_wall_distance * cos(right_wall_angle);
-        float right_wall_y = right_wall_distance * sin(right_wall_angle);
+    std::vector<WallLine> lines;
+    // 假设已分段，实际中应根据连续性分段
 
-        float door_center_x = (left_wall_x + right_wall_x) / 2.0;
-        float door_center_y = (left_wall_y + right_wall_y) / 2.0;
-
-        *target_x = door_center_x + pos_drone.pose.position.x + 0.5;
-        *target_y = door_center_y + pos_drone.pose.position.y;
-
-        cout << "Left Wall: (" << left_wall_x << ", " << left_wall_y << ")" << endl;
-        cout << "Right Wall: (" << right_wall_x << ", " << right_wall_y << ")" << endl;
-        cout << "Door Center: (" << *target_x << ", " << *target_y << ")" << endl;
+    bool doorFound = false;
+    for(size_t i = 0; i < lines.size(); i++) {
+        for(size_t j = i + 1; j < lines.size(); j++) {
+            float cx = 0, cy = 0;
+            if(checkDoor(lines[i], lines[j], &cx, &cy)) {
+                *target_x = cx + pos_drone.pose.position.x;
+                *target_y = cy + pos_drone.pose.position.y;
+                std::cout << "********************" << std::endl;
+                std::cout << "Door Center: (" << *target_x << ", " << *target_y << ")" << std::endl;
+                doorFound = true;
+                break;
+            }
+        }
+        if(doorFound) break;
     }
-    else
-    {
-        if(left_flag)
-            cout<<"Left_door is found!"<< endl;
-        else if(right_flag)
-            cout<<"Right_door is found!"<<end l;
-        cout << "No Door Found!" << endl;
+
+    if(!doorFound) {
+        std::cout << "No Door Found!" << std::endl;
     }
 }
-
-//下面可以考虑吧增加hsq所说的映射
-//////////////BEGIN/////////////
-
-
-
-//////////////END///////////////

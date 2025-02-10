@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="px4_command" type="winter" name="winter" output="screen">
+                <rosparam command="load" file="$(find px4_command)/config/winter.yaml" />
+	</node>
+</launch>
