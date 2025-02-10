@@ -314,6 +314,7 @@ int main(int argc, char **argv)
     int door_flag;
     cout<<"Whether choose to Start? 1 for start, 0 for quit"<<endl;
     cin >> door_flag;
+//From 刘芯贝
 //     int MAX_ATTEMPTS = 10;  // 最大尝试次数
 //     int attempts = 0;
 //     bool door_found = false;
