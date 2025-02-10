@@ -314,11 +314,35 @@ int main(int argc, char **argv)
     int door_flag;
     cout<<"Whether choose to Start? 1 for start, 0 for quit"<<endl;
     cin >> door_flag;
+//     int MAX_ATTEMPTS = 10;  // 最大尝试次数
+//     int attempts = 0;
+//     bool door_found = false;
+//  // 循环调用 doorfind 函数
+//     while (attempts < MAX_ATTEMPTS && !door_found) {
+//         ros::spinOnce();  // 更新传感器数据
+//         doorfind();
+//         // 这里可以根据 doorfind 函数的结果判断是否找到门
+//         // 假设当 door_find_location[0] 和 door_find_location[1] 不为 -1 时表示找到门
+//         if (door_find_location[0] != -1 && door_find_location[1] != -1) {
+//             door_found = true;
+//             cout << "Door found after " << attempts + 1 << " attempts." << endl;
+//         } else {
+//             attempts++;
+//             cout << "Door not found in attempt " << attempts << ". Retrying..." << endl;
+//             rate.sleep();
+//         }
+//     }
+//     if (!door_found) {
+//         cout << "Failed to find the door after " << MAX_ATTEMPTS << " attempts." << endl;
+//         return -1;
+//     } 
     //第三步，穿门
-    ros::spinOnce();
-    doorfind();
+    // ros::spinOnce();
+    // doorfind();
     abs_distance = 1e5;
     while (abs_distance > 0.1){
+        ros::spinOnce(); // Add this line to process callbacks
+        doorfind();
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = door_find_location[0];
@@ -329,7 +353,6 @@ int main(int argc, char **argv)
         comid++;
         command_pub.publish(Command_now);
         rate.sleep();
-        ros::spinOnce(); // Add this line to process callbacks
         cout << "Point 3----->passing_door" << endl;
         cout << "passing_door_x" << endl;
         cout << "x = "<<pos_drone.pose.position.x<< endl;
