@@ -1,0 +1,7 @@
+<launch>
+    <node name="video_stream_node" pkg="opencv_cpp_yolov5" type="video_stream_node">
+        <param name="video_path" value="/home/nvidia/Videos/test.mp4" />
+        <param name="frame_height" value="480" />
+        <param name="frame_width" value="640" />
+    </node>
+</launch>

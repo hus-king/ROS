@@ -1,0 +1,12 @@
+<launch>
+    <!-- Hough Circle Detector Node -->
+    <node name="hough_circle_detector_node" pkg="opencv_cpp_yolov5" type="hough_circle_detector_node">
+        <param name="dp" value="1.0" />
+        <param name="minDist" value="400.0" />
+        <param name="param1" value="100.0" />
+        <param name="param2" value="60.0" />
+        <param name="minRadius" value="0" />
+        <param name="maxRadius" value="0" />
+        <param name="pubImg" value="true" />
+    </node>
+</launch>
