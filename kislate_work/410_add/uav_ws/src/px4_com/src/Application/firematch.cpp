@@ -554,6 +554,9 @@ void collision_avoidance(float target_x,float target_y)
     rotation_yaw(Euler_fcu[2],vel_sp_body,vel_sp_ENU);
 
 }
+
+
+
 //思路：门相对于墙的激光数据会有很大的突变，在激光数据里找到这个突变范围，再转换到ENU坐标系下即可求出门的中心
 void finddoorcentor(int i)
 {
@@ -637,6 +640,7 @@ void finddoorcentor(int i)
         reach_firedoor_flag=true;
     }
 }
+
 //思路：在像素坐标系中的坐标可以通过激光数据和内参求出相对于机体的位置
 void find_fire_center()
 {
@@ -693,6 +697,8 @@ void find_fire_center()
 
     }
 }
+
+
 float compute_distance(float x0, float y0, float x1, float y1)
 {
     return sqrt((x0-x1)*(x0-x1)+(y0-y1)*(y0-y1));

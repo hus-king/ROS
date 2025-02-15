@@ -153,7 +153,7 @@ int main(int argc, char **argv)
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
-    // 【订阅】yolov5检测结果
+    // 【订阅】yolov5检测结果 Qrcode
 
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);

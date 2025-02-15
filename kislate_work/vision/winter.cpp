@@ -27,10 +27,22 @@ enum Command
     Idle
 };
 //--------------------------------------------识别--------------------------------------------------
-int Class_num_target = -1;
-int Class_num_now = -1;
-int door_num = 0;// 或许有用
+int detect_num;                                                  //darknet发布的检测到的物体数目
+darknet_ros_msgs::BoundingBox darknet_box;                       //用于模式4只用识别一张图的情况
+darknet_ros_msgs::BoundingBoxes darknet_boxes;                   //用于模式5需要识别三张图的情况
+// int flag_hold;                                                   //悬停标志
 
+float fx=554.3827;                                               //相机内参
+float fy=554.3827;
+float cx=320;
+float cy=240;
+// float pic_target[2];                                             //模式4的图像中心ENU坐标
+// float abs_distance1=10;                                          //为模式4中穿越2门与识别图像之间的过度而设置的最小距离值
+
+string Class_num_target = -1;
+string Class_num_now = -1;
+int door_num = 0;// 或许有用
+float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -154,8 +166,14 @@ void doorCenter_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
     } else {
         ROS_INFO("Received invalid BoxCenter");
     }
-    door_center[0] = msg -> x;
-    door_center[1] = msg -> y;
+    // 方法一：将其调整为现实坐标
+
+
+    // 方法二：当door_center正好位于图像中心时，向前走
+    door_center[0] = msg->x;
+    door_center[1] = msg->y;
+
+    
 }// 门检测回调函数
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
