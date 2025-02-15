@@ -26,6 +26,11 @@ enum Command
     Failsafe_land,
     Idle
 };
+//--------------------------------------------识别--------------------------------------------------
+int Class_num_target = -1;
+int Class_num_now = -1;
+int door_num = 0;// 或许有用
+
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -73,6 +78,7 @@ void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
+
 
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
@@ -140,6 +146,18 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Euler_fcu = quaternion_to_euler(q_fcu);
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
+
+// 实验代码，未必加入门检测：
+void doorCenter_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
+    if (msg->flag) {
+        ROS_INFO("Received valid BoxCenter: x = %d, y = %d", msg->x, msg->y);
+    } else {
+        ROS_INFO("Received invalid BoxCenter");
+    }
+    door_center[0] = msg -> x;
+    door_center[1] = msg -> y;
+}// 门检测回调函数
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -153,7 +171,9 @@ int main(int argc, char **argv)
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
-    // 【订阅】yolov5检测结果
+    // 【订阅】yolov5检测结果 Qrcode
+    // 实验代码，未必加入门检测：
+    ros::Subscriber sub = nh.subscribe("/opencv_cpp_yolov5/box_center", 10, doorCenter_cb);
 
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
@@ -390,6 +410,17 @@ int main(int argc, char **argv)
         cout << "target_y= "<<door_find_location[1]<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
+
+// 识别二维码：
+// 
+   ros::spinOnce();  // 更新传感器数据
+    // 识别二维码
+    /*
+        考虑循环更正位置，提高识别准确度
+    */
+//    
+
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     while (ros::ok())
@@ -407,7 +438,6 @@ int main(int argc, char **argv)
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = fly_turn ;
-
         float abs_distance;
         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
         if(abs_distance < 0.3 || flag_land == 1)
@@ -421,6 +451,10 @@ int main(int argc, char **argv)
         printf();
         rate.sleep();
     }
+
+    /*
+        while：加入巡航，识别二维码，降落等功能
+    */
     return 0;
 }
 

@@ -63,21 +63,24 @@ public:
 
     void image_cb(const sensor_msgs::ImageConstPtr& msg, ros::Publisher& bbox_pub, image_transport::Publisher& image_pub);
     // 定义一个检测函数，用于检测目标
-    struct Detection {
+
+    struct Detection {// 结构体，用于保存检测结果，比较重要的一个结构体
         int class_id;
 
         double confidence;
         // cv::Rect是OpenCV中用于表示矩形的类
         cv::Rect box;// 矩形框, 用于表示检测到的目标的位置,这里用的是左上角和右下角的点确定一个矩形框
+        // 注意：只保留左上角的点的坐标
         /*
             Rect里面有四个参数，分别是x, y, width, height
-            声明如下：
         */
 
         Detection() {}  // no idea whether we should leave default constructor or not
                         // yes, I also have no idea
-                        
+
         // why you need a default constructor here?
+
+        // The order of parameters in the list can be different from the order in the declaration
         Detection(int class_id, double confidence, cv::Rect box) : box(box), class_id(class_id), confidence(confidence) {}
         // 这里的构造包含参数，关注其实现位置
         /*
@@ -88,19 +91,59 @@ public:
     };
 
 protected:
+    // 定义一个检测函数，用于检测目标
+    // 分别是输入图像和输出检测结果
     void detect(cv::Mat &image, std::vector<Detection> &output);
-    const size_t num_classes;
-    std::array<std::string, MAX_NUM_CLASSES> class_list;
-    cv::dnn::Net yolo;
-    const float nms_threshold_;
-    const float confidence_threshold_;
-    const float score_threshold_;
-    const float yolo_input_width_;
-    const float yolo_input_height_;
 
-    size_t get_num_classes(const std::string& class_list_path);
-    void load_class_list(const std::string& class_list_path);
-    void load_yolo(const std::string &net_path, bool use_cuda);
+    const size_t num_classes;// 找到你了
+    std::array<std::string, MAX_NUM_CLASSES> class_list;// 找到你了
+    cv::dnn::Net yolo;// dnn, deep neural network, 深度神经网络
+    // 这里的Net是OpenCV中用于表示神经网络的类,其声明如下：
+    // (建议折叠)
+    /*
+        class Net
+        {
+        public:
+            Net();
+            Net(const String& model, const String& config = "", const String& framework = "");
+            virtual ~Net();
+            Net& operator=(const Net& other);
+            Net(const Net& other);
+            void setPreferableBackend(int backendId);
+            void setPreferableTarget(int targetId);
+            void setHalideScheduler(const String& scheduler);
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames = std::vector<String>());
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames = std::vector<String>()) const;
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames, int flags);
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames, int flags) const;
+            void setInput(const Mat& blob, const String& name = "");
+            void setInput(const std::vector<Mat>& blobs, const std::vector<String>& name = std::vector<String>());
+            Mat getLayerId(const String& layer);
+            std::vector<String> getLayerNames();
+            std::vector<String> getUnconnectedOutLayersNames();
+            std::vector<String> getUnconnectedOutLayers();
+            std::vector<String> getLayerTypes();
+            std::vector<String> getLayerNames(const String& type);
+            std::vector<int> getLayersShapes(const std::vector<int>& layers, int netInputShape = 0);
+            std::vector<int> getLayersShapes(const std::vector<String>& layers, int netInputShape = 0);
+            std::vector<int> getLayersShapes(const std::vector<int>& layers, const std::vector<int>& netInputShape);
+            std::vector<int> getLayersShapes(const std::vector<String>& layers, const std::vector<int>& netInputShape);
+            void setPreferableBackend(int backendId);
+            void setPreferableTarget(int targetId);
+            void setHalideScheduler(const String& scheduler);
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames = std::vector<String>());
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames = std::vector<String>()) const;
+            void forward(OutputArrayOfArrays outputBlobs, const std::vector
+    */
+    const float nms_threshold_;// 非极大值抑制阈值，用于去除重叠的边框
+    const float confidence_threshold_;// 置信度阈值
+    const float score_threshold_;// 分数阈值，更进一步的阈值
+    const float yolo_input_width_;// YOLO输入图像宽度
+    const float yolo_input_height_;// YOLO输入图像高度
+
+    size_t get_num_classes(const std::string& class_list_path);// 获取类别数量
+    void load_class_list(const std::string& class_list_path);// 加载类别列表
+    void load_yolo(const std::string &net_path, bool use_cuda);// 加载YOLO模型
 };
 
 #endif  // YOLO_DETECTOR_H_
