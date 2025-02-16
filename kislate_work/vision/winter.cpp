@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <math_utils.h>
 #include <algorithm> // 添加此头文件以使用 std::sort
+#include <opencv_cpp_yolov5/BoundingBoxes.h>
+#include <opencv_cpp_yolov5/BoundingBox.h>
+#include <opencv_cpp_yolov5/BoxCenter.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -39,8 +42,8 @@ float cy=240;
 // float pic_target[2];                                             //模式4的图像中心ENU坐标
 // float abs_distance1=10;                                          //为模式4中穿越2门与识别图像之间的过度而设置的最小距离值
 
-string Class_num_target = -1;
-string Class_num_now = -1;
+string Class_Id_target = -1;
+string Class_Id_now = -1;
 int door_num = 0;// 或许有用
 float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
 //--------------------------------------------输入--------------------------------------------------
@@ -77,6 +80,9 @@ float vel_sp_ENU_all = 0.2;
 float sleep_time;
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>识别函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+void confirm_ID();
+void find_ID();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 void printf();                                                                       //打印函数
@@ -90,8 +96,6 @@ void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
-
-
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
@@ -159,22 +163,29 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
 
+
 // 实验代码，未必加入门检测：
-void doorCenter_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
+void qrdetector_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
     if (msg->flag) {
         ROS_INFO("Received valid BoxCenter: x = %d, y = %d", msg->x, msg->y);
     } else {
         ROS_INFO("Received invalid BoxCenter");
     }
-    // 方法一：将其调整为现实坐标
+    darknet_boxes = *msg;
+    if(msg->bouding_boxes.size() > 0){
+        // 检测多个图像时：
+    }
 
+    /*
+    // 方法一：将其调整为现实坐标
 
     // 方法二：当door_center正好位于图像中心时，向前走
     door_center[0] = msg->x;
     door_center[1] = msg->y;
+    */
 
     
-}// 门检测回调函数
+}// 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
@@ -191,7 +202,7 @@ int main(int argc, char **argv)
 
     // 【订阅】yolov5检测结果 Qrcode
     // 实验代码，未必加入门检测：
-    ros::Subscriber sub = nh.subscribe("/opencv_cpp_yolov5/box_center", 10, doorCenter_cb);
+    ros::Subscriber sub = nh.subscribe("/opencv_cpp_yolov5/box_center", 10, qrdetector_cb);
 
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
