@@ -46,6 +46,10 @@ string Class_Id_target = -1;
 string Class_Id_now = -1;
 int door_num = 0;// 或许有用
 float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
+
+float qr_target_x;                                //图片中心x坐标
+float qr_target_y;                                //图片中心y坐标
+float MIN_SCORE = 0.5;
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -81,7 +85,7 @@ float sleep_time;
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>识别函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-void confirm_ID();
+void confirm_ID(bool& flag_qr);
 void find_ID();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
@@ -164,28 +168,10 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 }
 
 
-// 实验代码，未必加入门检测：
 void qrdetector_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
-    if (msg->flag) {
-        ROS_INFO("Received valid BoxCenter: x = %d, y = %d", msg->x, msg->y);
-    } else {
-        ROS_INFO("Received invalid BoxCenter");
-    }
-    darknet_boxes = *msg;
-    if(msg->bouding_boxes.size() > 0){
-        // 检测多个图像时：
-    }
+    darknet_boxes = *msg;// 只是获取消息
+}
 
-    /*
-    // 方法一：将其调整为现实坐标
-
-    // 方法二：当door_center正好位于图像中心时，向前走
-    door_center[0] = msg->x;
-    door_center[1] = msg->y;
-    */
-
-    
-}// 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
@@ -440,18 +426,73 @@ int main(int argc, char **argv)
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
 
-// 识别二维码：
-// 
-   ros::spinOnce();  // 更新传感器数据
-    // 识别二维码
-    /*
-        考虑循环更正位置，提高识别准确度
-    */
-//    
-
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
+    // 前往二维码识别区
+    bool flag_qr = false;
+    bool flag_target_1 = false;
+    while (ros::ok())
+    {
+        //回调一次 更新传感器状态
+        //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
+        ros::spinOnce();
+        cone_avoidance(qr_target_x,qr_target_y);
+
+        Command_now.command = Move_ENU;     //机体系下移动
+        Command_now.comid = comid;
+        comid++;
+        Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
+        Command_now.vel_sp[0] =  vel_sp_ENU[0];
+        Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
+        Command_now.pos_sp[2] =  fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        float abs_distance;
+        abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
+        if(abs_distance < 0.3 )
+        {
+            flag_target_1 = true;
+            break; 
+        }
+
+        command_pub.publish(Command_now);
+        //打印
+        printf();
+        rate.sleep();
+        cout << "Point 4----->move to qr" << endl;
+        cout << "qr_target_x = "<<qr_target_x<< "  ";
+        cout << "qr_target_y = "<<qr_target_y<< endl;
+        cout << "x = "<<pos_drone.pose.position.x<< "  ";
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+    }
+
+    // 悬停, 识别二维码
+    i = 0;
+    while (i < sleep_time)
+    {
+        ros::spinOnce(); 
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        if(!flag_qr){
+            cout << "QR code not detected" << endl;
+            confirm_ID(flag_qr);
+        }
+        else{
+            cout << "QR code detected " << " ID: " << Class_Id_target << endl;
+        }
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 4.5----->Detecting qrcode"<<endl;
+        cout << "i = "<<i<<endl;
+        i++;
+    }
+
+
     while (ros::ok())
     {
         //回调一次 更新传感器状态
@@ -480,7 +521,6 @@ int main(int argc, char **argv)
         printf();
         rate.sleep();
     }
-
     /*
         while：加入巡航，识别二维码，降落等功能
     */
@@ -652,4 +692,45 @@ void doorfind(){
     float x_length = y_length * tan(drone_angle * M_PI / 180);
     door_find_location[0] = pos_drone.pose.position.x + x_length;
     door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
+}
+
+
+void confirm_ID(bool& flag_qr){
+    // 识别的二维码ID
+    float posibility[10] = {0};
+    if(darknet_boxes.bounding_boxes.size() > 0){
+        for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
+            if(darknet_boxes.bounding_boxes[i].Class_Id < 10 && darknet_boxes.bounding_boxes[i].Class_Id >= 0){
+                posibility[darknet_boxes.bounding_boxes[i].Class_Id] = darknet_boxes.bounding_boxes[i].probability;
+            }
+        }
+    }// 去除不是二维码的ID
+
+    // 找到可能性最大的id
+    int max_id = 0;
+    for(int i = 0; i < 10; i++){
+        if(posibility[i] > posibility[max_id]){
+            max_id = i;
+        }
+    }
+    if(posibility[max_id] > MIN_SCORE){
+        flag_qr = true;
+    }
+    Class_Id_target = max_id;
+}// 有简化空间
+
+
+
+void find_ID(){
+    // 如果是目标ID，找到其中心
+    if(darknet_boxes.bounding_boxes.size() > 0){
+        for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
+            if(darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target){
+                qr_cx = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
+                qr_cy = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
+            }// 这里只是像素坐标中心
+        }
+    }   
+    // 加入坐标转换
+    // 误差处理，实时更新坐标
 }

@@ -9,6 +9,7 @@
         "bitset": "cpp",
         "algorithm": "cpp",
         "format": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "limits": "cpp"
     }
 }

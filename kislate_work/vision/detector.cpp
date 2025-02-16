@@ -39,26 +39,9 @@ string Class_Id_now = -1;
 int door_num = 0;// 或许有用
 float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
 //--------------------------------------------回调函数--------------------------------------------------
-// 实验代码，未必加入门检测：
 void qrdetector_cb(const opencv_cpp_yolov5::BoxCenter::ConstPtr& msg) {
-    if (msg->flag) {
-        ROS_INFO("Received valid BoxCenter: x = %d, y = %d", msg->x, msg->y);
-    } else {
-        ROS_INFO("Received invalid BoxCenter");
-    }
-    darknet_boxes = *msg;
-    if(msg->bouding_boxes.size() > 0){
-        // 检测多个图像时：
-    }
-
-    /*
-    // 方法一：将其调整为现实坐标
-
-    // 方法二：当door_center正好位于图像中心时，向前走
-    door_center[0] = msg->x;
-    door_center[1] = msg->y;
-    */
-}// 
+    darknet_boxes = *msg;// 只是获取消息
+}
 
 void confirm_ID(){
     // 识别的二维码ID
