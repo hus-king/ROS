@@ -431,7 +431,7 @@ int main(int argc, char **argv)
     // 前往二维码识别区
     bool flag_qr = false;
     bool flag_target_1 = false;
-    while (ros::ok())
+    while (qr_abs_distance > 0.2)
     {
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
@@ -447,13 +447,7 @@ int main(int argc, char **argv)
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = fly_turn ;
         float abs_distance;
-        abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
-        if(abs_distance < 0.3 )
-        {
-            flag_target_1 = true;
-            break; 
-        }
-
+        qr_abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
         command_pub.publish(Command_now);
         //打印
         printf();
