@@ -50,6 +50,15 @@ float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_lim
 float qr_target_x;                                //图片中心x坐标
 float qr_target_y;                                //图片中心y坐标
 float MIN_SCORE = 0.5;
+
+float target_x_1;
+float target_y_1;
+
+float target_x_2;
+float target_y_2;
+
+float target_x_3;
+float target_y_3;
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -466,8 +475,8 @@ int main(int argc, char **argv)
         ros::spinOnce(); 
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = 0;
-        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[0] = qr_target_x;
+        Command_now.pos_sp[1] = qr_target_y;
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
@@ -486,7 +495,12 @@ int main(int argc, char **argv)
         i++;
     }
 
+    // 识别二维码后，前往目标点
+    // 方案一:分别前往三个目标点比对
+    // 方案二: 巡航识别,将新坐标点入列,逐个试探
 
+
+    int case_num = 0;
     while (ros::ok())
     {
         //回调一次 更新传感器状态
@@ -494,6 +508,22 @@ int main(int argc, char **argv)
         ros::spinOnce();
         cone_avoidance(target_x,target_y);
 
+        switch(case_num){
+            case 0:
+                target_x = target_x_1;
+                target_y = target_y_1;
+                break;
+            case 1:
+                target_x = target_x_2;
+                target_y = target_y_2;
+                break;
+            case 2:
+                target_x = target_x_3;
+                target_y = target_y_3;
+                break;
+            default:
+                break;
+        }
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
         comid++;
@@ -504,12 +534,15 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = fly_turn ;
         float abs_distance;
         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
-        if(abs_distance < 0.3 || flag_land == 1)
+        if(abs_distance < 0.2 )
         {
-            Command_now.command = 3;     //Land
-            flag_land = 1;
+            Command_now.command = Hold; 
+            find_ID();
         }
         if(flag_land == 1) Command_now.command = Land;
+        else {
+            case_num = (case_num + 1) % 3;
+        }
         command_pub.publish(Command_now);
         //打印
         printf();

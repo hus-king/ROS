@@ -71,11 +71,11 @@ void find_ID(){
     if(darknet_boxes.bounding_boxes.size() > 0){
         for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
             if(darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target){
-                qr_cx = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
-                qr_cy = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
+               // qr_cx = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
+               // qr_cy = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
+               flag_land = 1;
             }// 这里只是像素坐标中心
         }
     }   
-    // 加入坐标转换
-    // 误差处理，实时更新坐标
+    // 此函数没有进行坐标转换，直接降落，一张图检测到多个就会失效
 }
