@@ -534,10 +534,17 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = fly_turn ;
         float abs_distance;
         abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
-        if(abs_distance < 0.2 )
+        if(abs_distance < 0.2 )// 感觉不妥
         {
-            Command_now.command = Hold; 
-            find_ID();
+            i = 0;
+            while(i < sleep_time)
+            {
+                find_ID();
+                command.now = hold;
+                command_pub.publish(Command_now);
+                rate.sleep();
+                i++;
+            }
         }
         if(flag_land == 1) Command_now.command = Land;
         else {
