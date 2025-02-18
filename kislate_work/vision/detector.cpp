@@ -66,16 +66,29 @@ void confirm_ID(){
 
 
 
-void find_ID(){
+void find_ID() {
+    float min_distance = std::numeric_limits<float>::infinity();
+    int closest_index = -1;
+
     // 如果是目标ID，找到其中心
-    if(darknet_boxes.bounding_boxes.size() > 0){
-        for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
-            if(darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target){
-               // qr_cx = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
-               // qr_cy = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
-               flag_land = 1;
-            }// 这里只是像素坐标中心
+    if (darknet_boxes.bounding_boxes.size() > 0) {
+        for (int i = 0; i < darknet_boxes.bounding_boxes.size(); i++) {
+            if (darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target) {
+                float center_x = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
+                float center_y = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
+                float distance = std::sqrt(std::pow(center_x - cx, 2) + std::pow(center_y - cy, 2));
+
+                if (distance < min_distance) {
+                    min_distance = distance;
+                    closest_index = i;
+                }
+            }
         }
-    }   
-    // 此函数没有进行坐标转换，直接降落，一张图检测到多个就会失效
+
+        if (closest_index != -1) {
+            qr_cx = (darknet_boxes.bounding_boxes[closest_index].xmin + darknet_boxes.bounding_boxes[closest_index].xmax) / 2;
+            qr_cy = (darknet_boxes.bounding_boxes[closest_index].ymin + darknet_boxes.bounding_boxes[closest_index].ymax) / 2;
+            flag_land = 1;
+        }
+    }
 }
