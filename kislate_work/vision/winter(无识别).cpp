@@ -11,9 +11,6 @@
 #include <stdlib.h>
 #include <math_utils.h>
 #include <algorithm> // 添加此头文件以使用 std::sort
-#include <opencv_cpp_yolov5/BoundingBoxes.h>
-#include <opencv_cpp_yolov5/BoundingBox.h>
-#include <opencv_cpp_yolov5/BoxCenter.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -30,9 +27,6 @@ enum Command
     Idle
 };
 //--------------------------------------------识别--------------------------------------------------
-int detect_num;                                                  //darknet发布的检测到的物体数目
-opencv_cpp_yolov5::BoundingBox darknet_box;                       //用于模式4只用识别一张图的情况
-opencv_cpp_yolov5::BoundingBoxes darknet_boxes;                   //用于模式5需要识别三张图的情况
 // int flag_hold;                                                   //悬停标志
 
 float fx=554.3827;                                               //相机内参
@@ -177,7 +171,7 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 }
 
 
-void qrdetector_cb(const opencv_cpp_yolov5::BoundingBoxes::ConstPtr& msg) {
+void qrdetector_cb(const opencv_cpp_yolov5::BOX::ConstPtr& msg) {
     darknet_boxes = *msg;// 只是获取消息
 }
 
@@ -195,10 +189,6 @@ int main(int argc, char **argv)
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
-    // 【订阅】yolov5检测结果 Qrcode
-    // 实验代码，未必加入门检测：
-    ros::Subscriber sub = nh.subscribe("/opencv_cpp_yolov5/box_center", 10, qrdetector_cb);
-
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
 
@@ -213,15 +203,7 @@ int main(int argc, char **argv)
     nh.param<float>("fly_forward", fly_forward, 0.8);
     nh.param<float>("sleep_time", sleep_time, 10.0);
 
-    //识别
-    nh.param<float>("qr_target_x", qr_target_x, 0.0);
-    nh.param<float>("qr_target_y", qr_target_y, 0.0);
-    nh.param<float>("target_x_1", target_x_1, 0.0);
-    nh.param<float>("target_y_1", target_y_1, 0.0);
-    nh.param<float>("target_x_2", target_x_2, 0.0);
-    nh.param<float>("target_y_2", target_y_2, 0.0);
-    nh.param<float>("target_x_3", target_x_3, 0.0);
-    nh.param<float>("target_y_3", target_y_3, 0.0);
+
 
     //打印现实检查参数
     printf_param();
@@ -449,6 +431,7 @@ int main(int argc, char **argv)
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     // 前往二维码识别区
+    float qr_abs_distance = 1e5;
     bool flag_qr = false;
     bool flag_target_1 = false;
     while (qr_abs_distance > 0.2)
@@ -479,6 +462,7 @@ int main(int argc, char **argv)
         cout << "y = "<<pos_drone.pose.position.y<< endl;
     }
 
+
     // 悬停, 识别二维码
     i = 0;
     while (i < sleep_time)
@@ -506,10 +490,11 @@ int main(int argc, char **argv)
         i++;
     }
 
+    // 加入没有识别到
+
     // 识别二维码后，前往目标点
     // 方案一:分别前往三个目标点比对
     // 方案二: 巡航识别,将新坐标点入列,逐个试探
-
 
     int case_num = 0;
     while (ros::ok())
@@ -550,17 +535,14 @@ int main(int argc, char **argv)
             i = 0;
             while(i < sleep_time)
             {
-                find_ID();
                 command.now = hold;
                 command_pub.publish(Command_now);
                 rate.sleep();
                 i++;
             }
         }
+        case_num++;
         if(flag_land == 1) Command_now.command = Land;
-        else {
-            case_num = (case_num + 1) % 3;
-        }
         command_pub.publish(Command_now);
         //打印
         printf();
@@ -740,29 +722,6 @@ void doorfind(){
 }
 
 
-void confirm_ID(bool& flag_qr){
-    // 识别的二维码ID
-    float posibility[10] = {0};
-    if(darknet_boxes.bounding_boxes.size() > 0){
-        for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
-            if(darknet_boxes.bounding_boxes[i].Class_Id < 10 && darknet_boxes.bounding_boxes[i].Class_Id >= 0){
-                posibility[darknet_boxes.bounding_boxes[i].Class_Id] = darknet_boxes.bounding_boxes[i].probability;
-            }
-        }
-    }// 去除不是二维码的ID
-
-    // 找到可能性最大的id
-    int max_id = 0;
-    for(int i = 0; i < 10; i++){
-        if(posibility[i] > posibility[max_id]){
-            max_id = i;
-        }
-    }
-    if(posibility[max_id] > MIN_SCORE){
-        flag_qr = true;
-    }
-    Class_Id_target = max_id;
-}// 有简化空间
 
 
 
@@ -780,28 +739,3 @@ void confirm_ID(bool& flag_qr){
 //     // 加入坐标转换
 //     // 误差处理，实时更新坐标
 // }
-
-void find_ID() {
-    float min_distance = std::numeric_limits<float>::infinity(); 
-    int closest_index = -1;
-
-    // 如果是目标ID，找到其中心
-    if (darknet_boxes.bounding_boxes.size() > 0) {
-        for (int i = 0; i < darknet_boxes.bounding_boxes.size(); i++) {
-            float center_x = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
-            float center_y = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
-            float distance = std::sqrt(std::pow(center_x - cx, 2) + std::pow(center_y - cy, 2));
-
-            if (distance < min_distance) {
-                min_distance = distance;
-                closest_index = i;
-            }
-        }
-
-        if (closest_index != -1 && darknet_boxes.bounding_boxes[closest_index].Class_Id == Class_Id_target) {
-            qr_cx = (darknet_boxes.bounding_boxes[closest_index].xmin + darknet_boxes.bounding_boxes[closest_index].xmax) / 2;
-            qr_cy = (darknet_boxes.bounding_boxes[closest_index].ymin + darknet_boxes.bounding_boxes[closest_index].ymax) / 2;
-            flag_land = 1;
-        }
-    }
-}
