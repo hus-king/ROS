@@ -533,7 +533,7 @@ int main(int argc, char **argv)
             i = 0;
             while(i < sleep_time)
             {
-                command_now.command = Hold;
+                Command_now.command = Hold;
                 command_pub.publish(Command_now);
                 rate.sleep();
                 i++;
