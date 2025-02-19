@@ -76,6 +76,7 @@ float vel_collision_max;                                        //躲避障碍�
 float vel_track[2];                                             //追踪部分速度
 float vel_track_max;                                            //追踪部分速度限幅
 int flag_land;                                                  //降落标志位
+float R_inside;                                                 //内圈半径
 //--------------------------------------------输出--------------------------------------------------
 std_msgs::Bool flag_collision_avoidance;                       //是否进入避障模式标志位
 float target_angle;                                             //目标角度
@@ -171,9 +172,6 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 }
 
 
-void qrdetector_cb(const opencv_cpp_yolov5::BOX::ConstPtr& msg) {
-    darknet_boxes = *msg;// 只是获取消息
-}
 
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -535,7 +533,7 @@ int main(int argc, char **argv)
             i = 0;
             while(i < sleep_time)
             {
-                command.now = hold;
+                command_now.command = Hold;
                 command_pub.publish(Command_now);
                 rate.sleep();
                 i++;

@@ -551,7 +551,7 @@ int main(int argc, char **argv)
             while(i < sleep_time)
             {
                 find_ID();
-                command.now = hold;
+                Command_now.command = Hold;
                 command_pub.publish(Command_now);
                 rate.sleep();
                 i++;
