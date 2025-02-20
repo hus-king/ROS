@@ -1,0 +1,12 @@
+yolo_model:
+
+  config_file:
+    name: yolov3_box_test.cfg
+  weight_file:
+    name: yolov3_box_train_140000.weights
+  threshold:
+    value: 0.1
+  detection_classes:
+    names:
+      - box1
+      - box2
