@@ -2,6 +2,7 @@
 
 //topic 头文件
 #include <iostream>
+#include <string>
 #include <px4_command/command.h>
 #include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>

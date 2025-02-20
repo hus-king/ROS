@@ -9,10 +9,18 @@
 #include <sensor_msgs/LaserScan.h>
 #include <cmath>
 #include <stdlib.h>
+
+#include <darknet_ros_msgs/BoundingBox.h> //目标检测
+#include <darknet_ros_msgs/BoundingBoxes.h> //目标检测
+#include <std_msgs/Int8.h>
+#include <std_msgs/String.h>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <math_utils.h>
 #include <algorithm> // 添加此头文件以使用 std::sort
-#include <opencv_cpp_yolov5/BoundingBoxes.h>
-#include <opencv_cpp_yolov5/BoundingBox.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -28,36 +36,23 @@ enum Command
     Failsafe_land,
     Idle
 };
+
 //--------------------------------------------识别--------------------------------------------------
-int detect_num;                                                  //darknet发布的检测到的物体数目
-opencv_cpp_yolov5::BoundingBox darknet_box;                       //用于模式4只用识别一张图的情况
-opencv_cpp_yolov5::BoundingBoxes darknet_boxes;                   //用于模式5需要识别三张图的情况
-// int flag_hold;                                                   //悬停标志
-
-float fx=554.3827;                                               //相机内参
-float fy=554.3827;
-float cx=320;
-float cy=240;
-// float pic_target[2];                                             //模式4的图像中心ENU坐标
-// float abs_distance1=10;                                          //为模式4中穿越2门与识别图像之间的过度而设置的最小距离值
-
-int Class_Id_target = -1;
-int Class_Id_now = -1;
-int door_num = 0;// 或许有用
-float door_center[2] = {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
-
 float qr_target_x;                                //图片中心x坐标
 float qr_target_y;                                //图片中心y坐标
-float MIN_SCORE = 0.5;
 
 float target_x_1;
 float target_y_1;
-
 float target_x_2;
 float target_y_2;
-
 float target_x_3;
 float target_y_3;
+
+darknet_ros_msgs::BoundingBoxes darknet_boxes;
+darknet_ros_msgs::BoundingBox darknet_box; 
+
+string qr_target = "None";// 目标的qr
+string qr_now = "None";// 当前的qr
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -72,6 +67,7 @@ float fly_height;
 float fly_forward;
 float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
+float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
 float p_r;                                                      //小圈比例参数
 float distance_c,angle_c;                                       //最近障碍物距离 角度
@@ -92,9 +88,6 @@ float vel_sp_ENU_all = 0.2;
 float sleep_time;
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>识别函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-void confirm_ID(bool& flag_qr);
-void find_ID();
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 void printf();                                                                       //打印函数
@@ -106,8 +99,11 @@ float cal_dis(float x1, float y1, float x2, float y2)
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
+void get_qr();
+void confirm_qr();
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
+
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
     output[0] = input[0] * cos(yaw_angle) - input[1] * sin(yaw_angle);
@@ -174,13 +170,10 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Euler_fcu = quaternion_to_euler(q_fcu);
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
-
-
-void qrdetector_cb(const opencv_cpp_yolov5::BoundingBoxes::ConstPtr& msg) {
-    darknet_boxes = *msg;// 只是获取消息
+void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg)
+{
+    darknet_boxes=*msg;
 }
-
-
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -188,6 +181,11 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     // 频率 [20Hz]
     ros::Rate rate(20.0);
+
+    //【订阅】darknet数据
+    ros::Subscriber darknet_box_sub = nh.subscribe<darknet_ros_msgs::BoundingBoxes>("/darknet_ros/bounding_boxes", 100, darknet_box_cb);
+
+
     //【订阅】Lidar数据
     //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
     ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
@@ -195,8 +193,6 @@ int main(int argc, char **argv)
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
     // 【订阅】yolov5检测结果 Qrcode
-    // 实验代码，未必加入门检测：
-    ros::Subscriber sub = nh.subscribe("/opencv_cpp_yolov5/box_center", 10, qrdetector_cb);
 
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
@@ -212,15 +208,16 @@ int main(int argc, char **argv)
     nh.param<float>("fly_forward", fly_forward, 0.8);
     nh.param<float>("sleep_time", sleep_time, 10.0);
 
-    //识别
+    //识别相关参数获取：
     nh.param<float>("qr_target_x", qr_target_x, 0.0);
-    nh.param<float>("qr_target_y", qr_target_y, 0.0);
+    nh.param<float>("qr_target_y", qr_target_y, -1.5);
     nh.param<float>("target_x_1", target_x_1, 0.0);
     nh.param<float>("target_y_1", target_y_1, 0.0);
     nh.param<float>("target_x_2", target_x_2, 0.0);
     nh.param<float>("target_y_2", target_y_2, 0.0);
     nh.param<float>("target_x_3", target_x_3, 0.0);
     nh.param<float>("target_y_3", target_y_3, 0.0);
+    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     //打印现实检查参数
     printf_param();
@@ -445,72 +442,186 @@ int main(int argc, char **argv)
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    
-    // 前往二维码识别区
-    bool flag_qr = false;
-    bool flag_target_1 = false;
-    while (qr_abs_distance > 0.2)
-    {
-        //回调一次 更新传感器状态
-        //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
+    // 前往二维码获取目标点
+
+    abs_distance = 1e5;
+    while (abs_distance > 0.3) {
         ros::spinOnce();
         cone_avoidance(qr_target_x,qr_target_y);
 
-        Command_now.command = Move_ENU;     //机体系下移动
-        Command_now.comid = comid;
-        comid++;
-        Command_now.sub_mode = 2; // xy 速度控制模式 z 位置控制模式
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 2;
         Command_now.vel_sp[0] =  vel_sp_ENU[0];
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = fly_turn ;
-        float abs_distance;
-        qr_abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
-        command_pub.publish(Command_now);
-        //打印
-        printf();
-        rate.sleep();
-        cout << "Point 4----->move to qr" << endl;
-        cout << "qr_target_x = "<<qr_target_x<< "  ";
-        cout << "qr_target_y = "<<qr_target_y<< endl;
-        cout << "x = "<<pos_drone.pose.position.x<< "  ";
-        cout << "y = "<<pos_drone.pose.position.y<< endl;
-    }
 
-    // 悬停, 识别二维码
-    i = 0;
-    while (i < sleep_time)
-    {
-        ros::spinOnce(); 
-        Command_now.command = Move_ENU;
-        Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = qr_target_x;
-        Command_now.pos_sp[1] = qr_target_y;
-        Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
-        if(!flag_qr){
-            cout << "QR code not detected" << endl;
-            confirm_ID(flag_qr);
+
+        command_pub.publish(Command_now);
+
+        rate.sleep();
+        cout << "fly to qr_detect_area" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "qr_target_x= "<<door_find_location[0]<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "qr_target_y= "<<door_find_location[1]<< endl;  
+        abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
+    }
+
+    // 悬停，识别，这里十秒，需要缩短
+    // 找到目标qr
+    i = 0;
+    while (i < sleep_time / 5.0)
+    {
+        ros::spinOnce();
+        if(qr_target == "None")
+        {
+            get_qr();
         }
-        else{
-            cout << "QR code detected " << " ID: " << Class_Id_target << endl;
-        }
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+
+        Command_now.pos_sp[0] = qr_target_x;// 可能导致移动
+        Command_now.pos_sp[1] = qr_target_y;
+
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
         command_pub.publish(Command_now);
         rate.sleep();
-        cout << "Point 4.5----->Detecting qrcode"<<endl;
+        cout << "Point 5----->detect"<<endl;
         cout << "i = "<<i<<endl;
         i++;
     }
 
-    // 识别二维码后，前往目标点
-    // 方案一:分别前往三个目标点比对
-    // 方案二: 巡航识别,将新坐标点入列,逐个试探
+    // 去往第一个目标点,并且确认是否为目标二维码，如果是，则降落
+    // 如果qr_target为“None”,也降落
+    abs_distance = 1e5;
+    while (abs_distance > 0.3) {
+        ros::spinOnce();
+        cone_avoidance(target_x_1,target_y_1);
 
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 2;
+        Command_now.vel_sp[0] =  vel_sp_ENU[0];
+        Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
+        Command_now.pos_sp[2] =  fly_height;
+        Command_now.yaw_sp = fly_turn ;
 
-    int case_num = 0;
+        Command_now.comid = comid;
+        comid++;
+
+        command_pub.publish(Command_now);
+
+        rate.sleep();
+        cout << "fly to target_1" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<target_x_1<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y= "<<target_y_1<< endl;  
+        abs_distance = sqrt((pos_drone.pose.position.x - target_x_1) * (pos_drone.pose.position.x - target_x_1) + (pos_drone.pose.position.y - target_y_1) * (pos_drone.pose.position.y - target_y_1));
+    }
+
+    // 悬停,如果qr_target为“None”,降落
+    i = 0;
+    while (i < sleep_time/5.0)
+    {
+        ros::spinOnce();
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = target_x_1;
+        Command_now.pos_sp[1] = target_y_1;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        if(qr_target == "None")
+        {
+            Command_now.command = Land;
+            flag_land = 1;
+            cout << "qr_target is None, land"<<endl;
+        }
+        confirm_qr();
+        if(flag_land == 1){ 
+            Command_now.command = Land;
+            cout << "qr_target is confirmed, land"<<endl;
+        }
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 5.5----->stay"<<endl;
+        cout << "i = "<<i<<endl;
+        cout << "qr_target = "<<qr_target<<endl;
+        cout << "qr_now = "<<qr_now<<endl;
+        cout << "flag_land = "<<flag_land<<endl;
+        i++;
+    }
+
+    // 去往第二个目标点,并且确认是否为目标二维码，如果是，则降落
+    // 如果qr_target为“None”,也降落
+    abs_distance = 1e5;
+    while (abs_distance > 0.3) {
+        ros::spinOnce();
+        cone_avoidance(target_x_2,target_y_2);
+
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 2;
+        Command_now.vel_sp[0] =  vel_sp_ENU[0];
+        Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
+        Command_now.pos_sp[2] =  fly_height;
+        Command_now.yaw_sp = fly_turn ;
+
+        Command_now.comid = comid;
+        comid++;
+
+        command_pub.publish(Command_now);
+
+        rate.sleep();
+        cout << "fly to target_2" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<target_x_2<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y= "<<target_y_2<< endl;  
+        abs_distance = sqrt((pos_drone.pose.position.x - target_x_2) * (pos_drone.pose.position.x - target_x_2) + (pos_drone.pose.position.y - target_y_2) * (pos_drone.pose.position.y - target_y_2));
+    }
+
+    // 悬停,如果qr_target为“None”,降落
+    i = 0;
+    while (i < sleep_time/5.0)
+    {
+        ros::spinOnce();
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = target_x_2;
+        Command_now.pos_sp[1] = target_y_2;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        if(qr_target == "None")
+        {
+            Command_now.command = Land;
+            flag_land = 1;
+            cout << "qr_target is None, land"<<endl;
+        }
+        confirm_qr();
+        if(flag_land == 1){ 
+            Command_now.command = Land;
+            cout << "qr_target is confirmed, land"<<endl;
+        }
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 5.5----->stay"<<endl;
+        cout << "i = "<<i<<endl;
+        cout << "qr_target = "<<qr_target<<endl;
+        cout << "qr_now = "<<qr_now<<endl;
+        cout << "flag_land = "<<flag_land<<endl;
+        i++;
+    }
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // 第三个目标点无论如何都降落
     while (ros::ok())
     {
         //回调一次 更新传感器状态
@@ -518,22 +629,6 @@ int main(int argc, char **argv)
         ros::spinOnce();
         cone_avoidance(target_x,target_y);
 
-        switch(case_num){
-            case 0:
-                target_x = target_x_1;
-                target_y = target_y_1;
-                break;
-            case 1:
-                target_x = target_x_2;
-                target_y = target_y_2;
-                break;
-            case 2:
-                target_x = target_x_3;
-                target_y = target_y_3;
-                break;
-            default:
-                break;
-        }
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
         comid++;
@@ -542,32 +637,20 @@ int main(int argc, char **argv)
         Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = fly_turn ;
+
         float abs_distance;
-        abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
-        if(abs_distance < 0.2 )// 感觉不妥
+        abs_distance = sqrt((pos_drone.pose.position.x - target_x_3) * (pos_drone.pose.position.x - target_x_3) + (pos_drone.pose.position.y - target_y_3) * (pos_drone.pose.position.y - target_y_3));
+        if(abs_distance < 0.3 || flag_land == 1)
         {
-            i = 0;
-            while(i < sleep_time)
-            {
-                find_ID();
-                Command_now.command = Hold;
-                command_pub.publish(Command_now);
-                rate.sleep();
-                i++;
-            }
+            Command_now.command = 3;     //Land
+            flag_land = 1;
         }
         if(flag_land == 1) Command_now.command = Land;
-        else {
-            case_num = (case_num + 1) % 3;
-        }
         command_pub.publish(Command_now);
         //打印
         printf();
         rate.sleep();
     }
-    /*
-        while：加入巡航，识别二维码，降落等功能
-    */
     return 0;
 }
 
@@ -739,68 +822,63 @@ void doorfind(){
 }
 
 
-void confirm_ID(bool& flag_qr){
-    // 识别的二维码ID
-    float posibility[10] = {0};
+// 简化版
+void get_qr(){
     if(darknet_boxes.bounding_boxes.size() > 0){
-        for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
-            if(darknet_boxes.bounding_boxes[i].Class_Id < 10 && darknet_boxes.bounding_boxes[i].Class_Id >= 0){
-                posibility[darknet_boxes.bounding_boxes[i].Class_Id] = darknet_boxes.bounding_boxes[i].probability;
-            }
-        }
-    }// 去除不是二维码的ID
-
-    // 找到可能性最大的id
-    int max_id = 0;
-    for(int i = 0; i < 10; i++){
-        if(posibility[i] > posibility[max_id]){
-            max_id = i;
-        }
+        qr_target = darknet_boxes.bounding_boxes[0].Class;
     }
-    if(posibility[max_id] > MIN_SCORE){
-        flag_qr = true;
-    } 
-    Class_Id_target = max_id;
-}// 有简化空间
+    else qr_target = "None";
+}
 
-
-
-// void find_ID(){
-//     // 如果是目标ID，找到其中心
-//     flag_land = 1;
-//     if(darknet_boxes.bounding_boxes.size() > 0){
-//         for(int i = 0; i < darknet_boxes.bounding_boxes.size(); i++){
-//             if(darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target){
-//                 qr_cx = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
-//                 qr_cy = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
-//             }// 这里只是像素坐标中心
-//         }
-//     }   
-//     // 加入坐标转换
-//     // 误差处理，实时更新坐标
-// }
-
-void find_ID() {
-    float min_distance = std::numeric_limits<float>::infinity(); 
-    int closest_index = -1;
-
-    // 如果是目标ID，找到其中心
-    if (darknet_boxes.bounding_boxes.size() > 0) {
-        for (int i = 0; i < darknet_boxes.bounding_boxes.size(); i++) {
-            float center_x = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
-            float center_y = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
-            float distance = std::sqrt(std::pow(center_x - cx, 2) + std::pow(center_y - cy, 2));
-
-            if (distance < min_distance) {
-                min_distance = distance;
-                closest_index = i;
-            }
-        }
-
-        if (closest_index != -1 && darknet_boxes.bounding_boxes[closest_index].Class_Id == Class_Id_target) {
-            qr_cx = (darknet_boxes.bounding_boxes[closest_index].xmin + darknet_boxes.bounding_boxes[closest_index].xmax) / 2;
-            qr_cy = (darknet_boxes.bounding_boxes[closest_index].ymin + darknet_boxes.bounding_boxes[closest_index].ymax) / 2;
+void confirm_qr(){
+    if(darknet_boxes.bounding_boxes.size() > 0){
+        qr_now = darknet_boxes.bounding_boxes[0].Class;
+        if(qr_now == qr_target){
             flag_land = 1;
         }
     }
 }
+
+
+
+// void get_qr(){
+//     int num = darknet_boxes.bounding_boxes.size();
+//     float max_posibility = 0;
+//     int max_i = -1;
+//     for(int i = 0; i < num; i++){
+//         if(darknet_boxes.bounding_boxes[i].probability > max_posibility){
+//             max_posibility = darknet_boxes.bounding_boxes[i].probability;
+//             max_i = i;
+//         }
+//     }
+//     if(max_i != -1){
+//         qr_target = darknet_boxes.bounding_boxes[max_i].Class;
+//     }    
+// }// 有简化空间
+
+// void confirm_qr(){
+//     float min_distance = std::numeric_limits<float>::infinity();
+//     int closest_index = -1;
+
+//     // 如果是目标ID，找到其中心
+//     if (darknet_boxes.bounding_boxes.size() > 0) {
+//         for (int i = 0; i < darknet_boxes.bounding_boxes.size(); i++) {
+//             if (darknet_boxes.bounding_boxes[i].Class_Id == Class_Id_target) {
+//                 float center_x = (darknet_boxes.bounding_boxes[i].xmin + darknet_boxes.bounding_boxes[i].xmax) / 2;
+//                 float center_y = (darknet_boxes.bounding_boxes[i].ymin + darknet_boxes.bounding_boxes[i].ymax) / 2;
+//                 float distance = std::sqrt(std::pow(center_x - cx, 2) + std::pow(center_y - cy, 2));
+
+//                 if (distance < min_distance) {
+//                     min_distance = distance;
+//                     closest_index = i;
+//                 }
+//             }
+//         }
+
+//         if (closest_index != -1) {
+//             qr_cx = (darknet_boxes.bounding_boxes[closest_index].xmin + darknet_boxes.bounding_boxes[closest_index].xmax) / 2;
+//             qr_cy = (darknet_boxes.bounding_boxes[closest_index].ymin + darknet_boxes.bounding_boxes[closest_index].ymax) / 2;
+//             flag_land = 1;
+//         }
+//     }
+// }
