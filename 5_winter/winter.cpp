@@ -40,6 +40,7 @@ float fly_height;
 float fly_forward;
 float fly_turn = -90;
 //--------------------------------------------算法相关--------------------------------------------------
+float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
 float p_r;                                                      //小圈比例参数
 float distance_c,angle_c;                                       //最近障碍物距离 角度

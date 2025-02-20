@@ -760,7 +760,7 @@ void confirm_ID(bool& flag_qr){
     }
     if(posibility[max_id] > MIN_SCORE){
         flag_qr = true;
-    }
+    } 
     Class_Id_target = max_id;
 }// 有简化空间
 
