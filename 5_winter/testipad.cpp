@@ -217,14 +217,14 @@ int main(int argc, char **argv)
         cout << "target = "<<fly_height<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.z, Command_now.pos_sp[0], Command_now.pos_sp[2]);
         cout << " abs_distance = "<<abs_distance<<endl; 
-        i++;
     }
 
+    i=0;
     while (i < sleep_time)
     {
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = fly_forward;
+        Command_now.pos_sp[0] = 0;
         Command_now.pos_sp[1] = 0;
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = 0;
@@ -235,14 +235,9 @@ int main(int argc, char **argv)
         cout << "Point 0.5----->stay"<<endl;
         cout << "z = "<<pos_drone.pose.position.z<<endl;
         cout << "target = "<<fly_height<<endl;
+        cout << "time = "<< i << endl;
         i++;
     }
-
-    //check start collision_avoid
-    int start_flag;
-    cout<<"Whether choose to Start mission? 1 for start, 0 for quit"<<endl;
-    cin >> start_flag;
-    if(Take_off_flag != 1) return -1;
 
     //初值
     vel_sp_ENU[0]= 0;
@@ -270,7 +265,7 @@ int main(int argc, char **argv)
         cout << "target = "<<fly_forward<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
-    //需要添加悬停
+
     i = 0;
     while (i < sleep_time)
     {
@@ -285,13 +280,10 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 1.5----->stay"<<endl;
-        cout << "i = "<<i<<endl;
+        cout << "time = "<<i<<endl;
         i++;
     }
 
-	// int turn_flag;
-	// cout<<"Whether choose to Start turn? 1 for start, 0 for quit"<<endl;
-    // cin >> turn_flag;
     //第二步，转90度
     float turn_angle=0;
     while (abs(Euler_fcu[2] * 180.0/M_PI - fly_turn)>3){
@@ -315,32 +307,23 @@ int main(int argc, char **argv)
     int door_flag;
     cout<<"Whether choose to Start? 1 for start, 0 for quit"<<endl;
     cin >> door_flag;
-//From 刘芯贝
-//     int MAX_ATTEMPTS = 10;  // 最大尝试次数
-//     int attempts = 0;
-//     bool door_found = false;
-//  // 循环调用 doorfind 函数
-//     while (attempts < MAX_ATTEMPTS && !door_found) {
-//         ros::spinOnce();  // 更新传感器数据
-//         doorfind();
-//         // 这里可以根据 doorfind 函数的结果判断是否找到门
-//         // 假设当 door_find_location[0] 和 door_find_location[1] 不为 -1 时表示找到门
-//         if (door_find_location[0] != -1 && door_find_location[1] != -1) {
-//             door_found = true;
-//             cout << "Door found after " << attempts + 1 << " attempts." << endl;
-//         } else {
-//             attempts++;
-//             cout << "Door not found in attempt " << attempts << ". Retrying..." << endl;
-//             rate.sleep();
-//         }
-//     }
-//     if (!door_found) {
-//         cout << "Failed to find the door after " << MAX_ATTEMPTS << " attempts." << endl;
-//         return -1;
-//     } 
+
     //第三步，穿门
-    // ros::spinOnce();
-    // doorfind();
+    int continue = 0;
+    while(continue != 1){
+        ros::spinOnce();
+        doorfind();
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<door_find_location[0]<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y = "<<door_find_location[1]<< endl;
+        cout << "key[0] = "<<key[0]<<endl;
+        cout << "key[1] = "<<key[1]<<endl;
+        cout << "key[2] = "<<key[2]<<endl;
+        cout << "key[3] = "<<key[3]<<endl;
+        cout << "continue?"<<endl;
+        cin >> continue;
+    }
     abs_distance = 1e5;
     while (abs_distance > 0.1){
         ros::spinOnce(); // Add this line to process callbacks
@@ -381,7 +364,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce(); // Add this line to process callbacks
-        cout << "passing_door" << endl;
+        cout << "passing_door_y" << endl;
         cout << "x = "<<pos_drone.pose.position.x<< endl;
         cout << "target_x= "<<door_find_location[0]<< endl;
         cout << "y = "<<pos_drone.pose.position.y<< endl;
