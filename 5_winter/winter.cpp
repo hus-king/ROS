@@ -11,6 +11,14 @@
 #include <stdlib.h>
 #include <math_utils.h>
 #include <algorithm> // 添加此头文件以使用 std::sort
+// #include <darknet_ros_msgs/BoundingBox.h> //目标检测
+// #include <darknet_ros_msgs/BoundingBoxes.h> //目标检测
+// #include <std_msgs/Int8.h>
+// #include <std_msgs/String.h>
+// #include <image_transport/image_transport.h>
+// #include <cv_bridge/cv_bridge.h>
+// #include <opencv2/imgproc/imgproc.hpp>
+// #include <opencv2/highgui/highgui.hpp>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -26,6 +34,22 @@ enum Command
     Failsafe_land,
     Idle
 };
+//--------------------------------------------识别--------------------------------------------------
+float qr_target_x;                                //图片中心x坐标
+float qr_target_y;                                //图片中心y坐标
+
+float target_x_1;
+float target_y_1;
+float target_x_2;
+float target_y_2;
+float target_x_3;
+float target_y_3;
+
+// darknet_ros_msgs::BoundingBoxes darknet_boxes;
+// darknet_ros_msgs::BoundingBox darknet_box; 
+
+string qr_target = "None";// 目标的qr
+string qr_now = "None";// 当前的qr
 //--------------------------------------------输入--------------------------------------------------
 sensor_msgs::LaserScan Laser;                                   //激光雷达点云数据
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
@@ -72,6 +96,8 @@ float cal_dis(float x1, float y1, float x2, float y2)
 void cone_avoidance(float target_x,float target_y);
 void v_control(float v, float newv[2], float target_angle);
 void normalize_angle(float *angle);
+// void get_qr();
+// void confirm_qr();
 // 【坐标系旋转函数】- 机体系到enu系
 // input是机体系,output是世界坐标系，yaw_angle是当前偏航角
 
@@ -141,6 +167,10 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Euler_fcu = quaternion_to_euler(q_fcu);
     //将四元数转换为欧拉角，并存储在全局变量 Euler_fcu 中。
 }
+// void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg)
+// {
+//     darknet_boxes=*msg;
+// }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -148,9 +178,11 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     // 频率 [20Hz]
     ros::Rate rate(20.0);
+    //【订阅】darknet数据
+    // ros::Subscriber darknet_box_sub = nh.subscribe<darknet_ros_msgs::BoundingBoxes>("/darknet_ros/bounding_boxes", 100, darknet_box_cb);
     //【订阅】Lidar数据
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
@@ -169,6 +201,15 @@ int main(int argc, char **argv)
     nh.param<float>("fly_height", fly_height, 0.5);
     nh.param<float>("fly_forward", fly_forward, 0.8);
     nh.param<float>("sleep_time", sleep_time, 10.0);
+    //识别相关参数获取：
+    nh.param<float>("qr_target_x", qr_target_x, 0.0);
+    nh.param<float>("qr_target_y", qr_target_y, -1.5);
+    // nh.param<float>("target_x_1", target_x_1, 0.0);
+    // nh.param<float>("target_y_1", target_y_1, 0.0);
+    // nh.param<float>("target_x_2", target_x_2, 0.0);
+    // nh.param<float>("target_y_2", target_y_2, 0.0);
+    // nh.param<float>("target_x_3", target_x_3, 0.0);
+    // nh.param<float>("target_y_3", target_y_3, 0.0);
     //打印现实检查参数
     printf_param();
 
@@ -243,7 +284,7 @@ int main(int argc, char **argv)
     vel_sp_ENU[0]= 0;
     vel_sp_ENU[1]= 0;
     flag_land = 0;
-    
+
     float abs_distance = 1e5;
     //第一步，前进0.5~0.8米
     while (abs_distance > 0.3) {
@@ -369,6 +410,57 @@ int main(int argc, char **argv)
         cout << "target_y= "<<door_find_location[1]<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
+
+    // 前往二维码获取目标点
+
+    abs_distance = 1e5;
+    while (abs_distance > 0.3) {
+        ros::spinOnce();
+        cone_avoidance(qr_target_x,qr_target_y);
+
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 2;
+        Command_now.vel_sp[0] =  vel_sp_ENU[0];
+        Command_now.vel_sp[1] =  vel_sp_ENU[1];  //ENU frame
+        Command_now.pos_sp[2] =  fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "fly to qr_detect_area" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "qr_target_x= "<<qr_target_x<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "qr_target_y= "<<qr_target_y<< endl;  
+        abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
+    }
+        // 悬停，识别，这里十秒，需要缩短
+    // 找到目标qr
+    i = 0;
+    while (i < sleep_time / 2.0)
+    {
+        ros::spinOnce();
+        // if(qr_target == "None")
+        // {
+        //     get_qr();
+        // }
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+
+        Command_now.pos_sp[0] = qr_target_x;// 可能导致移动
+        Command_now.pos_sp[1] = qr_target_y;
+
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 5----->detect"<<endl;
+        cout << "time = "<<i<<endl;
+        i++;
+    }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     while (ros::ok())
@@ -476,6 +568,8 @@ void printf_param()
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Parameter <<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "target_x : "<< target_x << endl;
     cout << "target_y : "<< target_y << endl;
+    cout << "qr_target_x : "<< qr_target_x << endl;
+    cout << "qr_target_y : "<< qr_target_y << endl;
     cout << "R_inside : "<< R_inside << endl;
     cout << "vel_sp_ENU_all : "<< vel_sp_ENU_all << endl;
     cout << "range_min : "<< range_min << endl;

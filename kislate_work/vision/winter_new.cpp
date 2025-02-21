@@ -181,11 +181,8 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     // 频率 [20Hz]
     ros::Rate rate(20.0);
-
     //【订阅】darknet数据
     ros::Subscriber darknet_box_sub = nh.subscribe<darknet_ros_msgs::BoundingBoxes>("/darknet_ros/bounding_boxes", 100, darknet_box_cb);
-
-
     //【订阅】Lidar数据
     //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
     ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
@@ -483,9 +480,9 @@ int main(int argc, char **argv)
         rate.sleep();
         cout << "fly to qr_detect_area" << endl;
         cout << "x = "<<pos_drone.pose.position.x<< endl;
-        cout << "qr_target_x= "<<door_find_location[0]<< endl;
+        cout << "qr_target_x= "<<qr_target_x<< endl;
         cout << "y = "<<pos_drone.pose.position.y<< endl;
-        cout << "qr_target_y= "<<door_find_location[1]<< endl;  
+        cout << "qr_target_y= "<<qr_target_y<< endl;  
         abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
     }
 

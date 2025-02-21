@@ -1,12 +1,11 @@
 ##Parameter for winter.cpp
 
 fly_height : 0.5
-fly_forward : 1
-height_square : 0.5
+fly_forward : 2.8
 ##  期望位置_x;
-target_x : 1
+target_x : 2.50
 ## 期望位置_y
-target_y : -8
+target_y : -3.8
 sleeptime : 10.0
 ## 单位:米
 R_outside : 1.0
@@ -21,3 +20,6 @@ vel_sp_max : 0.3
 ## 激光雷达范围设定
 range_min : 0
 range_max : 359
+
+qr_target_x : 0
+qr_target_y : -1.5
