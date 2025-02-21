@@ -250,7 +250,7 @@ int main(int argc, char **argv)
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
         comid++;
-        move_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         rate.sleep();
         ros::spinOnce();
         cout << "Point 0----->takeoff" << endl;
@@ -285,7 +285,7 @@ int main(int argc, char **argv)
     vel_sp_ENU[1]= 0;
     flag_land = 0;
 
-    float abs_distance = 1e5;
+    abs_distance = 1e5;
     //第一步，前进0.5~0.8米
     while (abs_distance > 0.3) {
         Command_now.command = Move_ENU;
@@ -348,8 +348,8 @@ int main(int argc, char **argv)
     cin >> door_flag;
 
     //第三步，穿门
-    int continue = 0;
-    while(continue != 1){
+    int continue_key = 0;
+    while( continue_key != 1){
         ros::spinOnce();
         doorfind();
         cout << "x = "<<pos_drone.pose.position.x<< endl;
@@ -361,7 +361,7 @@ int main(int argc, char **argv)
         cout << "key[2] = "<<key[2]<<endl;
         cout << "key[3] = "<<key[3]<<endl;
         cout << "continue?"<<endl;
-        cin >> continue;
+        cin >> continue_key;
     }
     abs_distance = 1e5;
     while (abs_distance > 0.1){
