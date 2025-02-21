@@ -427,12 +427,8 @@ int main(int argc, char **argv)
         Command_now.comid = comid;
         comid++;
         command_pub.publish(Command_now);
-        rate.sleep();
-        cout << "fly to qr_detect_area" << endl;
-        cout << "x = "<<pos_drone.pose.position.x<< endl;
-        cout << "qr_target_x= "<<qr_target_x<< endl;
-        cout << "y = "<<pos_drone.pose.position.y<< endl;
-        cout << "qr_target_y= "<<qr_target_y<< endl;  
+        rate.sleep();  
+        printf();
         abs_distance = sqrt((pos_drone.pose.position.x - qr_target_x) * (pos_drone.pose.position.x - qr_target_x) + (pos_drone.pose.position.y - qr_target_y) * (pos_drone.pose.position.y - qr_target_y));
     }
         // 悬停，识别，这里十秒，需要缩短
@@ -458,7 +454,7 @@ int main(int argc, char **argv)
         command_pub.publish(Command_now);
         rate.sleep();
         cout << "Point 5----->detect"<<endl;
-        cout << "time = "<<i<<endl;
+        cout << "time = "<<i<<endl;        
         i++;
     }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -661,5 +657,5 @@ void doorfind(){
     float y_length = (height[second_largest] + height[third_largest]) / 2.0;
     float x_length = y_length * tan(drone_angle * M_PI / 180);
     door_find_location[0] = pos_drone.pose.position.x + x_length;
-    door_find_location[1] = pos_drone.pose.position.y - y_length - 0.2;
+    door_find_location[1] = pos_drone.pose.position.y - y_length - 0.3;
 }

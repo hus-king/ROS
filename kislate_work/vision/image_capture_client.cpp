@@ -30,8 +30,12 @@ int main(int argc, char** argv) {
   // 订阅 BoundingBox 消息
   ros::Subscriber sub = nh.subscribe("/darknet_ros/bounding_boxes", 1, boundingBoxCallback);
 
-  // 调用服务进行拍照和检测
-  captureAndDetect(client);
+  int i;
+  cin >> i;
+  while(i != 0) {
+    captureAndDetect(client);
+    cin >> i;
+  }
 
   ros::spin();
   return 0;
