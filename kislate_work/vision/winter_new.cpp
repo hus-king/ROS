@@ -303,6 +303,24 @@ int main(int argc, char **argv)
 
     flag_land = 0;
 
+    // 起飞悬停
+    i = 0;
+    while (i < sleep_time)
+    {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 0----->stay"<<endl;
+        cout << "i = "<<i<<endl;
+        i++;
+    }
 
     float abs_distance = 1e5;
     //第一步，前进0.5~0.8米
@@ -323,6 +341,7 @@ int main(int argc, char **argv)
         cout << "target = "<<fly_forward<< endl;
         abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
     }
+
     //需要添加悬停
     i = 0;
     while (i < sleep_time)
@@ -473,7 +492,7 @@ int main(int argc, char **argv)
     // 悬停，识别，这里十秒，需要缩短
     // 找到目标qr
     i = 0;
-    while (i < sleep_time / 5.0)
+    while (i < sleep_time / 2.0)
     {
         ros::spinOnce();
         if(qr_target == "None")
@@ -516,18 +535,14 @@ int main(int argc, char **argv)
 
         command_pub.publish(Command_now);
 
-        rate.sleep();
-        cout << "fly to target_1" << endl;
-        cout << "x = "<<pos_drone.pose.position.x<< endl;
-        cout << "target_x= "<<target_x_1<< endl;
-        cout << "y = "<<pos_drone.pose.position.y<< endl;
-        cout << "target_y= "<<target_y_1<< endl;  
+        rate.sleep();  
+        printf();// 这里调用打印函数
         abs_distance = sqrt((pos_drone.pose.position.x - target_x_1) * (pos_drone.pose.position.x - target_x_1) + (pos_drone.pose.position.y - target_y_1) * (pos_drone.pose.position.y - target_y_1));
     }
 
     // 悬停,如果qr_target为“None”,降落
     i = 0;
-    while (i < sleep_time/5.0)
+    while (i < sleep_time/2.0)
     {
         ros::spinOnce();
         Command_now.command = Move_ENU;
@@ -546,6 +561,7 @@ int main(int argc, char **argv)
         }
         confirm_qr();
         if(flag_land == 1){ 
+            // 理论上只要发布过一次land，就必定会降落，见文件px4_pos_controller.cpp
             Command_now.command = Land;
             cout << "qr_target is confirmed, land"<<endl;
         }
@@ -558,6 +574,32 @@ int main(int argc, char **argv)
         cout << "flag_land = "<<flag_land<<endl;
         i++;
     }
+
+
+/*
+// 去第二个和第三个目标点的时候可以不开启避障
+    float abs_distance = 1e5;
+    while (abs_distance > 0.3) {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = target_x;
+        Command_now.pos_sp[1] = target_y;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "fly to target_2" << endl;
+        cout << "x = "<<pos_drone.pose.position.x<< endl;
+        cout << "target_x= "<<target_x_2<< endl;
+        cout << "y = "<<pos_drone.pose.position.y<< endl;
+        cout << "target_y= "<<target_y_2<< endl; 
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
+*/
+
 
     // 去往第二个目标点,并且确认是否为目标二维码，如果是，则降落
     // 如果qr_target为“None”,也降落
@@ -606,7 +648,7 @@ int main(int argc, char **argv)
             flag_land = 1;
             cout << "qr_target is None, land"<<endl;
         }
-        confirm_qr();
+        confirm_qr();// 确认是否为目标qr，如果是，则降落
         if(flag_land == 1){ 
             Command_now.command = Land;
             cout << "qr_target is confirmed, land"<<endl;
@@ -621,13 +663,47 @@ int main(int argc, char **argv)
         i++;
     }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Main Loop<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+/*不开避障直接去降落
+abs_distance = 1e5;
+    while (abs_distance > 0.3) {
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = target_x_3;
+        Command_now.pos_sp[1] = target_y_3;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = fly_turn ;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "Point 7----->move to return" << endl;
+        abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.y, Command_now.pos_sp[0], Command_now.pos_sp[1]);
+    }
+
+
+    Command_now.command = Land;
+    while (ros::ok()) {
+        command_pub.publish(Command_now);
+        rate.sleep();
+        ros::spinOnce(); // Add this line to process callbacks
+        cout << "Land" << endl;
+    }
+    rate.sleep();
+    cout << "Mission complete, exiting...." << endl;
+    return 0;
+*/
+
+
+// 套皮原函数
     // 第三个目标点无论如何都降落
     while (ros::ok())
     {
         //回调一次 更新传感器状态
         //1. 更新雷达点云数据，存储在Laser中,并计算四向最小距离
         ros::spinOnce();
-        cone_avoidance(target_x,target_y);
+        cone_avoidance(target_x_3,target_y_3);
 
         Command_now.command = Move_ENU;     //机体系下移动
         Command_now.comid = comid;
@@ -653,6 +729,7 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+
 
 //计算前后左右四向最小距离
 void cal_min_distance()
