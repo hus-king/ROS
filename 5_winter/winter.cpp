@@ -308,6 +308,7 @@ int main(int argc, char **argv)
     i = 0;
     while (i < sleep_time)
     {
+        ros::spinOnce();
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = fly_forward;
@@ -329,7 +330,8 @@ int main(int argc, char **argv)
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = fly_forward;
-        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[1] = -0.1;
+        //避免上网
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = turn_angle;
         turn_angle=turn_angle - 1.0 ;
