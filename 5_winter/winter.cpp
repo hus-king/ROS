@@ -127,24 +127,27 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     count = Laser.ranges.size();
 
     //剔除inf的情况
-    // for(int i = 0; i < count; i++)
-    // {
-    //     //判断是否为inf
-    //     int a = isinf(Laser_tmp.ranges[i]);
-    //     //如果为inf，则赋值上一角度的值
-    //     if(a == 1)
-    //     {
-    //         if(i == 0)
-    //         {
-    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
-    //         }
-    //         else
-    //         {
-    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
-    //         }
-    //     }
+    for(int i = 0; i < count; i++)
+    {
+        //判断是否为inf
+        int a = isinf(Laser_tmp.ranges[i]);
+        int b = isinf(Laser_tmp.ranges[i-1]);
+        int c = isinf(Laser_tmp.ranges[i+1]);
+        //如果为inf，则赋值上一角度的值
+        if((a == 1)&&(b != 1)%%(c != 1))
+        {
+            if(abs(Laser_tmp.ranges[i-1]-Laser_tmp.ranges[i+1]) > 0.1 ) break;
+            if(i == 0)
+            {
+                Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
+            }
+            else
+            {
+                Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
+            }
+        }
     
-    // }
+    }
     for(int i = 0; i < count; i++)
     {
            if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
