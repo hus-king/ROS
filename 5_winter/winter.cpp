@@ -510,6 +510,8 @@ void cal_min_distance()
     angle_c = angle_c + Euler_fcu[2] * 180.0/M_PI;
     normalize_angle(&angle_c);
 }
+
+
 void cone_avoidance(float target_x,float target_y){
     //2. 根据最小距离判断：是否启用避障策略
     if (distance_c >= R_inside ) flag_collision_avoidance.data = false;
@@ -606,7 +608,7 @@ int linefind(float height[181]) {
     line[0].start = 0;
     int key = 0;
     for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.3 && !isinf(height[i]) ) {
+        if (minus[i] < 0.3 && !isinf(height[i]) && (height[i] < 1.4) ) {
             //调大参数提高穿门概率
             line[key].length++;
             line[key].end = i + 1;
