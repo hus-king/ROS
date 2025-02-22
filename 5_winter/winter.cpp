@@ -238,13 +238,25 @@ int main(int argc, char **argv)
     int Take_off_flag;
     cout<<"Whether choose to Takeoff? 1 for Takeoff, 0 for quit"<<endl;
     cin >> Take_off_flag;
+    if(Take_off_flag == 1)
+    {
+        Command_now.command = Takeoff;
+        command_pub.publish(Command_now);
+    }
+    else return -1;
     
     int comid = 0;
     int i = 0;
     sleep_time = sleep_time * 20;
     float abs_distance = 1e5;
     
-    // while (abs_distance > 0.1) {
+
+
+
+
+    // i=0;
+    // while (i < sleep_time * 1.5)
+    // {
     //     Command_now.command = Move_ENU;
     //     Command_now.sub_mode = 0;
     //     Command_now.pos_sp[0] = 0;
@@ -255,33 +267,12 @@ int main(int argc, char **argv)
     //     comid++;
     //     command_pub.publish(Command_now);
     //     rate.sleep();
-    //     ros::spinOnce();
-    //     cout << "Point 0----->takeoff" << endl;
-    //     cout << "z = "<<pos_drone.pose.position.z<< endl;
-    //     cout << "target = "<<fly_height<< endl;
-    //     abs_distance = cal_dis(pos_drone.pose.position.x, pos_drone.pose.position.z, Command_now.pos_sp[0], Command_now.pos_sp[2]);
-    //     cout << " abs_distance = "<<abs_distance<<endl; 
+    //     cout << "Point 0 -----> takeoff & stay"<<endl;
+    //     cout << "z = "<<pos_drone.pose.position.z<<endl;
+    //     cout << "target = "<<fly_height<<endl;
+    //     cout << "time = "<< i << endl;
+    //     i++;
     // }
-
-    i=0;
-    while (i < sleep_time * 1.5)
-    {
-        Command_now.command = Move_ENU;
-        Command_now.sub_mode = 0;
-        Command_now.pos_sp[0] = 0;
-        Command_now.pos_sp[1] = 0;
-        Command_now.pos_sp[2] = fly_height;
-        Command_now.yaw_sp = 0;
-        Command_now.comid = comid;
-        comid++;
-        command_pub.publish(Command_now);
-        rate.sleep();
-        cout << "Point 0 -----> takeoff & stay"<<endl;
-        cout << "z = "<<pos_drone.pose.position.z<<endl;
-        cout << "target = "<<fly_height<<endl;
-        cout << "time = "<< i << endl;
-        i++;
-    }
 
     //初值
     vel_sp_ENU[0]= 0;
@@ -577,7 +568,7 @@ void printf_param()
     cout << "vel_sp_ENU_all : "<< vel_sp_ENU_all << endl;
     cout << "range_min : "<< range_min << endl;
     cout << "range_max : "<< range_max << endl;
-    cout<<"fly heigh: "<<fly_height<<endl;
+    cout<<"fly height: "<<fly_height<<endl;
     cout<<"fly forward: "<<fly_forward<<endl;
     cout<<"fly turn: "<<fly_turn<<endl;
     cout<<"sleep_time "<<sleep_time<<endl;
