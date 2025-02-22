@@ -611,7 +611,7 @@ int linefind(float height[181]) {
     line[0].start = 0;
     int key = 0;
     for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.3 && !isinf(height[i]) && (height[i] < 1.4) ) {
+        if (minus[i] < 0.1 && !isinf(height[i]) && (height[i] < 1.2) ) {
             //调大参数提高穿门概率
             line[key].length++;
             line[key].end = i + 1;
@@ -639,6 +639,7 @@ void doorfind(){
         if((aa == 1)&&(bb != 1)&&(cc != 1) && (height[i+1] - height[i-1] < 0.1))
         {
             height[i] = height[i-1];
+            cout <<"good"<<endl;
         }
     }
 
