@@ -134,7 +134,7 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
         int b = isinf(Laser_tmp.ranges[i-1]);
         int c = isinf(Laser_tmp.ranges[i+1]);
         //如果为inf，则赋值上一角度的值
-        if((a == 1)&&(b != 1)%%(c != 1))
+        if((a == 1)&&(b != 1)&&(c != 1))
         {
             if(abs(Laser_tmp.ranges[i-1]-Laser_tmp.ranges[i+1]) > 0.1 ) break;
             if(i == 0)
