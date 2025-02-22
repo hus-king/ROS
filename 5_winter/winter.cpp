@@ -639,6 +639,7 @@ void doorfind(){
         if((aa == 1)&&(bb != 1)&&(cc != 1) && (height[i+1] - height[i-1] < 0.1))
         {
             height[i] = height[i-1];
+            cout <<"good"<<endl;
         }
     }
 
