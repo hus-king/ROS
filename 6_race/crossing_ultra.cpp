@@ -95,12 +95,15 @@ bool MatchForOneSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int 
 float CalculateOverlapArea(float xmin1, float ymin1, float xmax1, float ymax1, float xmin2, float ymin2, float xmax2, float ymax2);
 void TimeSurvel();
 float CalculateOverlapRate(darknet_ros_msgs::BoundingBox bbox1,darknet_ros_msgs::BoundingBox bbox2);
+//计算两目标框之间重叠率
 void CalculateCoordinate();
 bool JudgeIfPosAvail();
 bool JudgeIfCBisBeside(darknet_ros_msgs::BoundingBox bigbox,darknet_ros_msgs::BoundingBox smlbox,float threshold);
+//判断两个目标框是否相邻
 float gain_depth();
 
-
+//计算两点间距离
+//接收一个点和三个坐标值
 double getLengthBetweenPoints(geometry_msgs::Point a, double x, double y, double z,
                               double *out_err_x = nullptr, double *out_err_y = nullptr, double *out_err_z = nullptr) {
     double err_x = a.x - x;
@@ -111,13 +114,14 @@ double getLengthBetweenPoints(geometry_msgs::Point a, double x, double y, double
     if (out_err_z != nullptr) *out_err_z = err_z;
     return sqrt(err_x * err_x + err_y * err_y + err_z * err_z);
 }
-
+//接收两个点
 double getLengthBetweenPoints(geometry_msgs::Point a, geometry_msgs::Point b,
                               double *out_err_x = nullptr, double *out_err_y = nullptr, double *out_err_z = nullptr) {
     return getLengthBetweenPoints(a, b.x, b.y, b.z, out_err_x, out_err_y, out_err_z);
 }
 
 //世界坐标系为左手系。向前为x正向，向左为y正向，向上为z正向
+//计算两点之间方向角
 double getDistanceYaw(geometry_msgs::Point a,geometry_msgs::Point b)
 {
     float dy,dx,angle;
@@ -128,7 +132,7 @@ double getDistanceYaw(geometry_msgs::Point a,geometry_msgs::Point b)
     return angle;
 }
 
-
+//根据深度信息判断无人机的转向方向
 int Turning_Way(){
 
         float depth_sums[640];
@@ -145,6 +149,7 @@ int Turning_Way(){
                 }
             }
             depth_aver[x] = depth_sums[x]/depth_index;
+            //计算每一列的平均深度
         }
 
         float left_sum = 0, right_sum = 0;
@@ -170,7 +175,7 @@ int Turning_Way(){
 
 
 
-
+//回调函数
 mavros_msgs::State current_state;
 void state_cb(const mavros_msgs::State::ConstPtr &msg) {
     current_state = *msg;
@@ -184,12 +189,14 @@ void pose_cb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
     tf::quaternionMsgToTF(msg->pose.orientation, quaternion);
     tf::Matrix3x3(quaternion).getRPY(current_rpy.x, current_rpy.y, current_rpy.z);
 }
+//rpy是指无人机的滚转角(Rol)、俯仰角(Pitch)和偏航角(Yaw)。
 
 
 //void camera_cb(const camera_processor::PointDepth::ConstPtr &msg) {
 //    depth_info.clear();
 //    depth_info.assign(msg->depths.begin(),msg->depths.end());
 //}
+//深度相机，分辨率为640*480
 void camera_cb(const camera_processor::PointDepth::ConstPtr &msg) {
     //depth_msg_ptr = &msg;
     for(int y=0;y<480;++y){
@@ -222,6 +229,17 @@ void camera_cb(const camera_processor::PointDepth::ConstPtr &msg) {
     }
     return false;
 }
+*/
+/*
+ID对应的物品（我猜的）
+ID=0 ：红色棋盘格(Red Chessboard)
+ID=1 ：蓝色棋盘格(Blue Chessboard)
+ID=2 ：圆环(Circle)
+ID=3 ：方框(Square)
+ID=4 ：复杂环(Complicated Ring)
+ID=5 ：复杂环(Complicated Ring)
+ID=6 ：红色圆环(Red Circle)
+ID=7 ：蓝色圆环(Blue Circle)
 */
 void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
     find_target=false;
@@ -389,12 +407,14 @@ bool MatchForBothCurCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int 
     for(int i=0;i<boxcount;i++){
         ID=msg->bounding_boxes[i].id;
         rate=CalculateOverlapRate(msg->bounding_boxes[flag],msg->bounding_boxes[i]);
+        //检查重叠率是否在阈值内
         check=JudgeIfCBisBeside(msg->bounding_boxes[flag],msg->bounding_boxes[i],beside_thres);
-	    if((ID==6)&&check&&rate>=ovl_rate_low_thres&&rate<=ovl_rate_high_thres){
+        //检查是否相邻
+	    if((ID==6)&&check&&rate>=ovl_rate_low_thres&&rate<=ovl_rate_high_thres){ //ID=6是红色圆环
             promax2=msg->bounding_boxes[i].probability;
             flag2=i;
 	    }
-        if((ID==7)&&check&&rate>=ovl_rate_low_thres&&rate<=ovl_rate_high_thres){
+        if((ID==7)&&check&&rate>=ovl_rate_low_thres&&rate<=ovl_rate_high_thres){ //ID=7是蓝色圆环
             promax1=msg->bounding_boxes[i].probability;
             flag1=i;
 	    }
@@ -563,6 +583,7 @@ bool MatchForOneSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int 
         return false;
     }
 }
+//判断两个目标框是否相邻
 bool JudgeIfCBisBeside(darknet_ros_msgs::BoundingBox bigbox,darknet_ros_msgs::BoundingBox smlbox,float threshold){
     float width=bigbox.xmax-bigbox.xmin;
     if(width<=0){
@@ -605,6 +626,7 @@ void TimeSurvel(){
     }
     return;
 }
+//计算两个目标框之间重叠率
 float CalculateOverlapRate(darknet_ros_msgs::BoundingBox bbox1,darknet_ros_msgs::BoundingBox bbox2){
     float overlap_area=CalculateOverlapArea(bbox1.xmin,bbox1.ymin,bbox1.xmax,bbox1.ymax,bbox2.xmin,bbox2.ymin,bbox2.xmax,bbox2.ymax);
     float area;
