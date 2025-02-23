@@ -1,15 +1,3 @@
 {
-    "files.associations": {
-        "ostream": "cpp",
-        "cmath": "cpp",
-        "array": "cpp",
-        "string": "cpp",
-        "string_view": "cpp",
-        "span": "cpp",
-        "bitset": "cpp",
-        "algorithm": "cpp",
-        "format": "cpp",
-        "iostream": "cpp",
-        "limits": "cpp"
-    }
+    "cmake.ignoreCMakeListsMissing": true
 }
