@@ -85,6 +85,7 @@ float angle_thres = 0.26;
 int turning = 0;
 //在两个目标框中选择置信度最高的目标
 int CompWhichIsToBelieve(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int choice1,int choice2);
+//设置TARGET为匹配到左右棋盘格的方框
 bool AutoMatchForSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
 //匹配圆环(2)和左右双框（6、7）
 bool MatchForBothCurCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
@@ -276,8 +277,9 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
             case 4:case 5:{
                 //横双框(4)和竖双框(5)
                 if(MatchForBothSquare(msg,flag,both_square[0],both_square[1])){
-                    //双框能匹配到两个方框
+                //双框能匹配到两个方框
                     if(AutoMatchForSquare(msg,both_chessboard[0],both_chessboard[1],CompWhichIsToBelieve(msg,both_square[0],both_square[1]))){
+                    //设置TARGET为匹配到左右棋盘格的方框
                         if(msg->bounding_boxes[flag].id==5){
                             TARGET.flip_css=true;
                         }
@@ -288,6 +290,7 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
                     }
                 }
                 else if(MatchForOneSquare(msg,flag)){
+                //寻找一个置信度最高且ID为3（表示方框）的目标
                     if(MatchForBothCB(msg,both_chessboard[0],both_chessboard[1],flag)){
                         SettingTargets(1);
                         ABConstructor(msg,flag,-1,-1,both_chessboard[0],both_chessboard[1]);
@@ -321,16 +324,20 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
 
 
     if(JudgeMostConf(msg,flag0)>0.7){
+    //寻找置信度最高的目标
         switch(flag0){
             case 0:{
+            //红色棋盘格
                 both_chessboard[1]=flag0;
                 if(OnlyMatchingCB(msg,flag0,both_chessboard[0],1)){
+                //判断红色棋盘格（0）能否与蓝色棋盘格（1）匹配
                     ABConstructor(msg,both_chessboard[0],both_chessboard[1]);
                     return;
                 }
                 break;
             }
             case 1:{
+            //蓝色棋盘格
                 both_chessboard[0]=flag0;
                 if(OnlyMatchingCB(msg,flag0,both_chessboard[1],0)){
                     ABConstructor(msg,both_chessboard[0],both_chessboard[1]);
@@ -373,6 +380,7 @@ void SettingTargets(bool jud){
         missed_target=true;
     }
 }
+//寻找置信度最高的目标
 float JudgeMostConf(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int& flag0){
     boxcount=msg->bounding_boxes.size();
     float promax=-1.0;flag0=-1;
@@ -399,6 +407,7 @@ int CompWhichIsToBelieve(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,in
     }
 }
 
+//设置TARGET为匹配到左右棋盘格的方框
 bool AutoMatchForSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag){
 //flag为置信度高的单框的序号,falg1与flag2为匹配到的两个棋盘格类型的序号
     if(MatchForOneSquare(msg,flag)){、
@@ -444,6 +453,7 @@ bool MatchForBothCurCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int 
         return false;
     }
 }
+//判断一个棋盘格能否匹配到另一个棋盘格
 bool OnlyMatchingCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int flag1,int &flag2,int type){
     boxcount=msg->bounding_boxes.size();
     float promax=-1.0;
