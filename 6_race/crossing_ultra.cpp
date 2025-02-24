@@ -83,18 +83,21 @@ float back_distance = 0.5;
 float angle_thres = 0.26;
 
 int turning = 0;
+//在两个目标框中选择置信度最高的目标
 int CompWhichIsToBelieve(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int choice1,int choice2);
 bool AutoMatchForSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
-bool MatchForBothCurCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
 //匹配圆环(2)和左右双框（6、7）
+bool MatchForBothCurCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
+//匹配方框和左右的棋盘格
 bool MatchForBothCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag);
-bool MatchForCompRing(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag);
 //选取圆环和双框类型中置信度最高的目标
-bool MatchForBothSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int flag,int &note1,int &note2);
+bool MatchForCompRing(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag);
 //判断双框能否匹配到两个方框
+bool MatchForBothSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int flag,int &note1,int &note2);
 bool OneCornerIsIn(darknet_ros_msgs::BoundingBox bigbox,darknet_ros_msgs::BoundingBox smlbox);
-void ABConstructor(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int bigbox,int smlbox1,int smlbox2,int chessbox1,int chessbox2);
 //根据不同的输入参数构造TARGET
+void ABConstructor(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int bigbox,int smlbox1,int smlbox2,int chessbox1,int chessbox2);
+//寻找一个置信度最高且ID为3（表示方框）的目标
 bool MatchForOneSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &access);
 float CalculateOverlapArea(float xmin1, float ymin1, float xmax1, float ymax1, float xmin2, float ymin2, float xmax2, float ymax2);
 void TimeSurvel();
@@ -382,6 +385,7 @@ float JudgeMostConf(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int& fl
     return promax;
 }
 
+//在两个目标框中选择置信度最高的目标
 int CompWhichIsToBelieve(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int choice1,int choice2){
     boxcount=msg->bounding_boxes.size();
     if(choice1<0||choice2<0||choice1>=boxcount||choice2>=boxcount){
@@ -396,8 +400,9 @@ int CompWhichIsToBelieve(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,in
 }
 
 bool AutoMatchForSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag){
-//flag为横双框或者竖双框的序号,falg1与flag2为匹配到的两个棋盘格类型的序号
-    if(MatchForOneSquare(msg,flag)){
+//flag为置信度高的单框的序号,falg1与flag2为匹配到的两个棋盘格类型的序号
+    if(MatchForOneSquare(msg,flag)){、
+    //falg被更新为置信度最高的框的序号
         if(MatchForBothCB(msg,flag1,flag2,flag)){
             SettingTargets(1);
             ABConstructor(msg,flag,-1,-1,flag1,flag2);
@@ -457,7 +462,9 @@ bool OnlyMatchingCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int fla
         return true;
     }
 }
+//匹配方框和左右的棋盘格
 bool MatchForBothCB(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &flag1,int &flag2,int flag){
+    //flag为方框的序号，flag1与flag2为匹配到的两个棋盘格类型的序号
     boxcount=msg->bounding_boxes.size();
     float promax1 = -1.0, promax2=-1.0;
     int ID;float rate;bool check;
@@ -581,7 +588,7 @@ void ABConstructor(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int ches
     TARGET.cssbox[0]=msg->bounding_boxes[chessbox1];
     return;
 }
-
+//寻找一个置信度最高且ID为3（表示方框）的目标
 bool MatchForOneSquare(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg,int &access){
     boxcount=msg->bounding_boxes.size();
     int ID,flag=-1;
