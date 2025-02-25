@@ -1,0 +1,7 @@
+遥控器主要部位及其功能：
+POWER：开关
+左摇杆：控制油门
+右摇杆：控制方向
+SwA：Emergency Kill，紧急制动
+SwC：定高（拨一下）；定点（拨两下，GPS需搜寻到信号）
+SwD：offboard开关
