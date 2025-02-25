@@ -708,7 +708,7 @@ void CalculateCoordinate(){
     abs_distance = sqrt(dx*dx+dy*dy);
     return;
 }
-
+//获取各种情况的深度信息
 float gain_depth(){
    
     float depth_sum = 0;
@@ -1150,58 +1150,75 @@ void move_base_cmd_vel_cb(const geometry_msgs::Twist::ConstPtr &msg) {
     move_base_twist = *msg;
 }
 
-geometry_msgs::Point last_err;
-geometry_msgs::Point err_sum;
-double last_yaw_err = 0.;
-double yaw_err_sum = 0.;
-ros::Time last_pid_control_time;
-geometry_msgs::Twist get_pid_vel(geometry_msgs::Point target,double reach_yaw) {
+geometry_msgs::Point last_err;       // 保存上一次的位置误差（用于计算微分项）
+geometry_msgs::Point err_sum;        // 位置误差积分项（用于PID积分计算）
+double last_yaw_err = 0.;           // 上一次的yaw角误差
+double yaw_err_sum = 0.;            // yaw角误差积分项
+ros::Time last_pid_control_time;    // 上一次PID控制的时间戳
+
+// PID控制主函数：计算线速度和角速度，使机器人移动到目标位置和方向
+geometry_msgs::Twist get_pid_vel(geometry_msgs::Point target, double reach_yaw) {
+    // 获取当前时间戳（通常来自传感器数据）
     ros::Time currentStamp = current_pose.header.stamp;
+    // 计算与上一次控制的时间间隔
     ros::Duration dt = currentStamp - last_pid_control_time;
-    if (dt.toSec() > 0.2) {
-        err_sum.x = 0.;
-        err_sum.y = 0.;
-        err_sum.z = 0.;
-        yaw_err_sum = 0.;
+
+    // 长时间无控制时重置积分（防止积分饱和）
+    if (dt.toSec() > 0.2) {  // 超过200ms未更新视为异常间隔
+        err_sum.x = err_sum.y = err_sum.z = 0.;  // 重置位置积分
+        yaw_err_sum = 0.;                        // 重置yaw角积分
     }
 
+    // 计算当前位置与目标的位置误差（三维欧氏距离）
     geometry_msgs::Point err;
+    // absErr: 当前位置到目标的直线距离 
+    // err.x/y/z: 分解到x/y/z轴的误差分量
     double absErr = getLengthBetweenPoints(target, current_pose.pose.position, &err.x, &err.y, &err.z);
 
-    double y_err = reach_yaw - current_rpy.z;
-    double dy_err = (y_err - last_yaw_err) / dt.toSec();
+    // 计算yaw角误差（航向角偏差）
+    double y_err = reach_yaw - current_rpy.z;      // 当前yaw角误差
+    double dy_err = (y_err - last_yaw_err) / dt.toSec();  // yaw角误差微分项
 
-    geometry_msgs::Twist ret;
+    geometry_msgs::Twist ret;  // 最终生成的速度指令
+
+    // ========================= 角速度控制 =========================
+    // 完整PID公式：Kp*当前误差 + Ki*误差积分 + Kd*误差变化率
     ret.angular.z = VEL_P * y_err + VEL_I * yaw_err_sum + VEL_D * dy_err;
 
-    if (absErr > 0.8) {
-        ret.linear.x = err.x * 0.8 / absErr;
-        ret.linear.y = err.y * 0.8 / absErr;
-        ret.linear.z = err.z * 0.8 / absErr;
+    // ========================= 线速度控制 =========================
+    if (absErr > 0.8) {  // 大误差模式：快速接近目标
+        // 将误差方向单位化后乘以0.8m/s（限速）
+        ret.linear.x = err.x * 0.8 / absErr;  // x轴分量
+        ret.linear.y = err.y * 0.8 / absErr;  // y轴分量
+        ret.linear.z = err.z * 0.8 / absErr;  // z轴分量
 
-        err_sum.x = .0;
-        err_sum.y = .0;
-        err_sum.z = .0;
-    } else {
+        // 重置积分项（避免快速移动时积分积累导致震荡）
+        err_sum.x = err_sum.y = err_sum.z = 0.;
+    } else {  // 小误差模式：精细调整
+        // 计算位置误差的微分项（误差变化率）
         geometry_msgs::Point d_err;
-        d_err.x = (err.x - last_err.x) / dt.toSec();
-        d_err.y = (err.y - last_err.y) / dt.toSec();
-        d_err.z = (err.z - last_err.z) / dt.toSec();
+        d_err.x = (err.x - last_err.x) / dt.toSec();  // x轴误差变化率
+        d_err.y = (err.y - last_err.y) / dt.toSec();  // y轴误差变化率
+        d_err.z = (err.z - last_err.z) / dt.toSec();  // z轴误差变化率
 
+        // 完整PID公式计算各轴线速度
         ret.linear.x = VEL_P * err.x + VEL_I * err_sum.x + VEL_D * d_err.x;
         ret.linear.y = VEL_P * err.y + VEL_I * err_sum.y + VEL_D * d_err.y;
         ret.linear.z = VEL_P * err.z + VEL_I * err_sum.z + VEL_D * d_err.z;
 
-        err_sum.x += err.x * dt.toSec();
-        err_sum.y += err.y * dt.toSec();
-        err_sum.z += err.z * dt.toSec();
+        // 累积积分项（误差随时间积分）
+        err_sum.x += err.x * dt.toSec();  // x轴积分
+        err_sum.y += err.y * dt.toSec();  // y轴积分
+        err_sum.z += err.z * dt.toSec();  // z轴积分
     }
 
-    last_err = err;
-    last_yaw_err = y_err;
-    yaw_err_sum += y_err * dt.toSec();
-    last_pid_control_time = currentStamp;
-    return ret;
+    // ====================== 更新历史状态 ========================
+    last_err = err;               // 保存当前误差供下次计算微分
+    last_yaw_err = y_err;         // 保存当前yaw误差
+    yaw_err_sum += y_err * dt.toSec();  // 累积yaw角积分
+    last_pid_control_time = currentStamp;  // 记录本次控制时间
+
+    return ret;  // 返回计算得到的速度指令
 }
 
 struct HoverTarget {
@@ -1347,12 +1364,88 @@ int main(int argc, char **argv) {
     float record_time = 0;
     float square_view = 0;
     float find_time = 0;
+//fsm_state各值的含义：
+/*****************************​ 初始化阶段 ​*****************************/
+// case 0:  准备进入OFFBOARD模式
+// 目标：切换飞行模式到OFFBOARD（外部控制模式）
+// - 如果已进入OFFBOARD：转状态1（准备解锁）
+// - 否则每隔1秒尝试发送模式设置请求
+// case 1:  等待解锁（ARM）
+// 目标：完成飞行器解锁
+// - 如果已解锁：初始化起飞位置并转状态2（起飞）
+// - 否则每隔1秒发送解锁指令
+/*****************************​ 起飞阶段 ​*******************************/
+// case 2:  起飞过程
+// 目标：爬升到指定高度（fly_height）
+// - 使用PID控制垂直速度
+// - 达到目标高度后转状态3（导航）
+/*****************************​ 导航阶段 ​*******************************/
+// case 3:  航点导航
+// 目标：按顺序访问预设航点
+// - 如果所有航点完成：转状态7（悬停）
+// - 到达当前航点时：
+//   - 悬停并转状态31（转向对准目标框）
+//   - 设置finding_state=2（进入目标搜索模式）
+// case 31: 转向对准目标
+// 目标：调整航向对准目标框
+// - 使用PID控制偏航角
+// - 达到目标角度后转状态5（目标搜索）
+/*****************************​ 目标操作阶段 ​***************************/
+// case 5:  目标搜索模式
+// 目标：通过视觉识别定位目标框
+// - 超时未找到目标时：
+//   - finding_state=1：回退到导航（状态3）
+//   - finding_state=2：转状态63（后退观察）
+//   - finding_state=3：转状态64（方形搜索）
+// - 发现目标时：
+//   - 计算穿越路径并转状态61/62
+// case 61: 视觉对准微调
+// 目标：精确对准目标框中心
+// - 根据视觉反馈调整位置和角度
+// - 达到精度要求后转状态62（穿越执行）
+// case 62: 穿越执行
+// 目标：穿过已识别的目标框
+// - 沿预定轨迹移动
+// - 完成后更新航点索引并转回导航（状态3）
+// case 63: 后退观察模式
+// 目标：通过后退获取更好的观察视角
+// - 后退固定距离后返回搜索（状态5）
+// case 64: 方形搜索模式
+// 目标：在三维空间执行系统搜索
+// - 按预定方形轨迹移动
+// - 包含上升、平移、下降等复合动作
+/*****************************​ 异常处理阶段 ​***************************/
+// case 9:  // 避障导航
+// 目标：绕过障碍物到达安全航点
+// - 使用修改后的导航逻辑
+// - 到达后转状态31（重新对准）
+/*****************************​ 任务结束阶段 ​***************************/
+// case 7:  悬停待命
+// 目标：保持当前位置
+// - 5秒后转状态8（着陆）
+// case 8:  着陆过程
+// 目标：安全降落
+// - 下降到指定高度后切换LAND模式
+// - 确认着陆后转结束状态（-1）
+/*****************************​ 特殊状态 ​*******************************/
+// case -1: 任务终止
+// 最终状态：所有操作终止
+// default: 异常状态处理
+}
+/*
+状态转换特征说明
+- 层次化设计：初始化 → 起飞 → 导航 → 目标操作 → 降落
+- 模式切换：通过finding_state细分搜索策略
+- 安全设计：超时机制/避障/异常回退
+- 定位方式：结合视觉反馈（find_target）和PID控制
+- 导航逻辑：航点队列 + 动态路径修正 
+*/
 
     while (ros::ok()) {
         geometry_msgs::TwistStamped twist;
         //target_yaw = getDistanceYaw(hover_target.points[target_index],current_pose.pose.position);
         switch (fsm_state) {
-            case 0:  // Before offboard state
+            case 0:  // 准备进入OFFBOARD模式
                 if (current_state.mode == "OFFBOARD") {
                     fsm_state = 1;  // goto before armed state
                     last_srv_request = ros::Time::now();
@@ -1407,7 +1500,7 @@ int main(int argc, char **argv) {
                 }
                 break;
 
-            case 3:  // Navigation state
+            case 3:  // 导航状态
                if (target_index > hover_target.points.size()) {
                     fsm_state = 7;  // All points visited, goto hover state
                     last_srv_request = ros::Time::now();
@@ -1424,7 +1517,8 @@ int main(int argc, char **argv) {
                     //cancel_pub.publish(cancel_msg);
                        
                 }
-                if (getLengthBetweenPoints(hover_target.points[target_index], current_pose.pose.position) < 0.1) //到达预设点位
+                if (getLengthBetweenPoints(hover_target.points[target_index], current_pose.pose.position) < 0.1) 
+                //到达预设点位
                 {
                     //geometry_msgs::PoseStamped move_base_msg;
                     //move_base_msg.header.frame_id = "map";
