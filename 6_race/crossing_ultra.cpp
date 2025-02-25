@@ -105,6 +105,7 @@ void TimeSurvel();
 float CalculateOverlapRate(darknet_ros_msgs::BoundingBox bbox1,darknet_ros_msgs::BoundingBox bbox2);
 //计算两目标框之间重叠率
 void CalculateCoordinate();
+//检查两个框之间的中心距离
 bool JudgeIfPosAvail();
 bool JudgeIfCBisBeside(darknet_ros_msgs::BoundingBox bigbox,darknet_ros_msgs::BoundingBox smlbox,float threshold);
 //判断两个目标框是否相邻
@@ -321,8 +322,6 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
             SettingTargets(0);
         }
     }
-
-
     if(JudgeMostConf(msg,flag0)>0.7){
     //寻找置信度最高的目标
         switch(flag0){
@@ -340,12 +339,14 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
             //蓝色棋盘格
                 both_chessboard[0]=flag0;
                 if(OnlyMatchingCB(msg,flag0,both_chessboard[1],0)){
+                //判断蓝色棋盘格（1）能否与红色棋盘格（0）匹配
                     ABConstructor(msg,both_chessboard[0],both_chessboard[1]);
                     return;
                 }
                 break;
             }
             case 6:{
+            //红色曲线型圆环
                 both_chessboard[1]=flag0;
                 if(OnlyMatchingCB(msg,flag0,both_chessboard[0],7)){
                     ABConstructor(msg,both_chessboard[0],both_chessboard[1]);
@@ -353,6 +354,7 @@ void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
                 }
             }
             case 7:{
+            //蓝色曲线型棋盘格
                 both_chessboard[0]=flag0;
                 if(OnlyMatchingCB(msg,flag0,both_chessboard[1],6)){
                     ABConstructor(msg,both_chessboard[0],both_chessboard[1]);
@@ -632,6 +634,7 @@ bool JudgeIfCBisBeside(darknet_ros_msgs::BoundingBox bigbox,darknet_ros_msgs::Bo
     return false;
 }
 
+//计算两个目标框之间的重叠面积
 float CalculateOverlapArea(float xmin1, float ymin1, float xmax1, float ymax1, float xmin2, float ymin2, float xmax2, float ymax2){
     //计算重叠区域的左上角和右下角
     float overlap_xmin = std::max(xmin1, xmin2);
@@ -648,6 +651,7 @@ float CalculateOverlapArea(float xmin1, float ymin1, float xmax1, float ymax1, f
     //ROS_INFO("OverlapArea:%f",overlap_area);
     return overlap_area;
 }
+//统计时间
 void TimeSurvel(){
     if(find_target){
         missed_target = false;
@@ -689,6 +693,7 @@ float CalculateOverlapRate(darknet_ros_msgs::BoundingBox bbox1,darknet_ros_msgs:
 void CalculateCoordinate(){
     float pic_center_x,pic_center_y;
     if(TARGET.flip_css){
+    //判断是通过方框计算还是仅仅通过棋盘格计算
         pic_center_x=(TARGET.bigbox.xmin+TARGET.bigbox.xmax)/2.0;
         pic_center_y=(TARGET.bigbox.ymin+TARGET.bigbox.ymax)/2.0;
     }
@@ -701,8 +706,6 @@ void CalculateCoordinate(){
     dy=-dz*(pic_center_x-cx)/fx;
 	dx=-dz*(pic_center_y-cy)/fy;
     abs_distance = sqrt(dx*dx+dy*dy);
-    
-  
     return;
 }
 
@@ -717,31 +720,37 @@ float gain_depth(){
     float y_smiddle = 0;//four point
     float x_tmiddle = 0;//three point
     float z1,z2;
-    if(TARGET.bigbox.id == 3){ //square
-        if(TARGET.cssbox[0].id == 1){ //blue chess
+    if(TARGET.bigbox.id == 3){
+    //方框
+        if(TARGET.cssbox[0].id == 1){
+        //匹配到了蓝色棋盘格
             x_middle = (TARGET.cssbox[0].xmin + TARGET.cssbox[0].xmax)/2.0;
             y_middle = (TARGET.cssbox[0].ymin + TARGET.cssbox[0].ymax)/2.0;
-            x_smiddle = (x_middle + TARGET.cssbox[0].xmin)/2.0;
-            y_smiddle = (TARGET.cssbox[0].ymax - TARGET.cssbox[0].ymin)/8.0;
+            x_smiddle = (x_middle + TARGET.cssbox[0].xmin)/2.0;  //四分点
+            y_smiddle = (TARGET.cssbox[0].ymax - TARGET.cssbox[0].ymin)/8.0;  //八分点
             
             for(int j = 0;j < static_cast<int>(TARGET.cssbox[0].ymax - TARGET.cssbox[0].ymin)/2.0;j++){
                 for(int i = 0 ;i < static_cast<int>( (TARGET.cssbox[0].xmax - TARGET.cssbox[0].xmin)/2.0 ) ; i++) {
                     if(depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]<=0.5 || depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]>=far_thres) {}
+                    //计算右上角的平均深度
                     else{   
                         depth_sum += depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)];
                         e_index ++;
                         }
                     if(depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle-j)]<=0.5 || depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle-j)]>=far_thres) {}
+                    //计算右下角的平均深度
                     else{   
                         depth_sum += depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle-j)];
                         e_index ++;
                         }
                     if(depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle+j)]<=0.5 || depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle+j)]>=far_thres) {}
+                    //计算左上角的平均深度
                     else{   
                         depth_sum += depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle+j)];
                         e_index ++;
                         }
                     if(depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle-j)]<=0.5 || depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle-j)]>=far_thres) {}
+                    //计算左下角的平均深度
                     else{   
                         depth_sum += depth_msg[static_cast<int>(x_middle - i)][static_cast<int>(y_middle-j)];
                         e_index ++;
@@ -752,9 +761,9 @@ float gain_depth(){
             }
 
             depth_average = depth_sum/e_index;
-            for(int i = static_cast<int>(x_smiddle);i < static_cast<int>(x_middle);i++){
-                for(int j = static_cast<int>(y_middle - y_smiddle);j < static_cast<int>(y_middle + y_smiddle);j++){
-                    if(fabs(depth_msg[i][j] - depth_average) >= depth_thres ) continue;
+            for(int i = static_cast<int>(x_smiddle);i < static_cast<int>(x_middle);i++){   //从四分点到中点
+                for(int j = static_cast<int>(y_middle - y_smiddle);j < static_cast<int>(y_middle + y_smiddle);j++){   //取最中间的四分之一
+                    if(fabs(depth_msg[i][j] - depth_average) >= depth_thres ) continue;  //depth_thres为0.3
                     depth_sum +=depth_msg[i][j];
                     e_index ++;
                     depth_average = depth_sum/e_index;
@@ -764,7 +773,8 @@ float gain_depth(){
             z1 = depth_average;
             ROS_ERROR("Z1:%f",z1);
         }
-        else if(TARGET.cssbox[0].id == 0){ //red chess
+        else if(TARGET.cssbox[0].id == 0){
+        //匹配到了红色棋盘格
             x_middle = (TARGET.cssbox[0].xmin + TARGET.cssbox[0].xmax)/2.0;
             y_middle = (TARGET.cssbox[0].ymin + TARGET.cssbox[0].ymax)/2.0;
             x_smiddle = (x_middle + TARGET.cssbox[0].xmax)/2.0;
@@ -816,8 +826,8 @@ float gain_depth(){
         if(TARGET.cssbox[1].id == 1){ //blue chess
             x_middle = (TARGET.cssbox[1].xmin + TARGET.cssbox[1].xmax)/2.0;
             y_middle = (TARGET.cssbox[1].ymin + TARGET.cssbox[1].ymax)/2.0;
-            x_smiddle = (x_middle + TARGET.cssbox[1].xmin)/2.0;
-            y_smiddle = (TARGET.cssbox[1].ymax - TARGET.cssbox[1].ymin)/8.0;
+            x_smiddle = (x_middle + TARGET.cssbox[1].xmin)/2.0;  //四分之一点
+            y_smiddle = (TARGET.cssbox[1].ymax - TARGET.cssbox[1].ymin)/8.0;  //八分之一的距离
             for(int j = 0;j < static_cast<int>(TARGET.cssbox[1].ymax - TARGET.cssbox[1].ymin)/2.0;j++){
                 for(int i = 0 ;i < static_cast<int>( (TARGET.cssbox[1].xmax - TARGET.cssbox[1].xmin)/2.0 ) ; i++) {
                     if(depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]<=0.5 || depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]>=far_thres) {}
@@ -866,7 +876,7 @@ float gain_depth(){
             for(int j = 0;j < static_cast<int>(TARGET.cssbox[1].ymax - TARGET.cssbox[1].ymin)/2.0;j++){
                 for(int i = 0 ;i < static_cast<int>( (TARGET.cssbox[1].xmax - TARGET.cssbox[1].xmin)/2.0 ) ; i++) {
                     if(depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]<=0.5 || depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)]>=far_thres) {}
-                    else{   
+                    else{               
                         depth_sum += depth_msg[static_cast<int>(x_middle + i)][static_cast<int>(y_middle+j)];
                         e_index ++;
                         }
@@ -903,7 +913,8 @@ float gain_depth(){
             ROS_ERROR("Z2:%f",z2);
         }
     }
-    else if(TARGET.bigbox.id == 2){ //circle
+    else if(TARGET.bigbox.id == 2){
+    //圆环
         if(TARGET.cssbox[0].id == 7){ //blue cur
             x_tmiddle = (-TARGET.cssbox[0].xmin + TARGET.cssbox[0].xmax) / 3.0 + TARGET.cssbox[0].xmin;
             x_middle = (TARGET.cssbox[0].xmax+TARGET.cssbox[0].xmin)/2.0;
@@ -1094,13 +1105,13 @@ float gain_depth(){
     ROS_INFO("z1:%f,z2:%f",z1,z2);
     float xcen1 = (TARGET.cssbox[1].xmax + TARGET.cssbox[1].xmin)/2.0;
     float xcen0 = (TARGET.cssbox[0].xmax + TARGET.cssbox[0].xmin)/2.0;
-    float css_dis = abs(xcen0 - xcen1)*(z1+z2)/(fx*2.0);
+    float css_dis = abs(xcen0 - xcen1)*(z1+z2)/(fx*2.0);  //距离门的距离
     if(xcen0 < xcen1)  lean_angle = atan2(z2-z1 , css_dis);
     else if(xcen0 > xcen1) lean_angle = -atan2(z2-z1,css_dis);
     return (z1+z2)/2 ;
 }
 
-
+//检查两个框之间的中心距离
 bool JudgeIfPosAvail(){
     float ymin0= TARGET.cssbox[0].ymin,ymax0= TARGET.cssbox[0].ymax,ymin1=TARGET.cssbox[1].ymin,ymax1=TARGET.cssbox[1].ymax,xmin0= TARGET.cssbox[0].xmin,xmax0= TARGET.cssbox[0].xmax,xmin1=TARGET.cssbox[1].xmin,xmax1=TARGET.cssbox[1].xmax;
     float xcen0=(xmax0+xmin0)/2.0,xcen1=(xmax1+xmin1)/2.0,ycen0=(ymax0+ymin0)/2.0,ycen1=(ymax1+ymin1)/2.0;
@@ -1114,7 +1125,7 @@ bool JudgeIfPosAvail(){
     return true;
 }
 
-
+//确保两个目标框面积相近，且中心点距离在一定范围内
 bool judge_if_position_correct() {
     float ymin0 = target_box[0].ymin, ymax0 = target_box[0].ymax, ymin1 = target_box[1].ymin, ymax1 = target_box[1].ymax;
     float xmin0 = target_box[0].xmin, xmax0 = target_box[0].xmax, xmin1 = target_box[1].xmin, xmax1 = target_box[1].xmax;
