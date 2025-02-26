@@ -1,0 +1,2 @@
+livox_laser_simulation:tutorials/tutorial_all:tutorials/tutorial_basic:tutorials/tutorial_catapult:tutorials/tutorial_gazebo:tutorials/tutorial_navigation:tutorials/tutorial_vision
+-DCATKIN_DEVEL_PREFIX=/home/nx/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/nx/catkin_ws/install -G Unix Makefiles
