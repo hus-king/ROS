@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="depth_visualizer" type="depth_visualizer_node" name="depth_visualizer_node" output="screen"/>
+
+</launch>

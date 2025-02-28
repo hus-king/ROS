@@ -1,0 +1,2 @@
+camera_processor:depth_visualizer:point_depth_viewer:realsense_pkg
+-DCATKIN_DEVEL_PREFIX=/home/nx/cam_ws/devel -DCMAKE_INSTALL_PREFIX=/home/nx/cam_ws/install -G Unix Makefiles
