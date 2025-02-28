@@ -1,0 +1,8 @@
+prefix=/home/nx/catkin_ws/devel
+
+Name: tutorial_vision
+Description: Description of tutorial_vision
+Version: 0.0.0
+Cflags: -I/home/nx/catkin_ws/devel/include
+Libs: -L${prefix}/lib 
+Requires: 
