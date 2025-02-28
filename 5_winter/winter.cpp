@@ -127,27 +127,27 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan)
     count = Laser.ranges.size();
 
     //剔除inf的情况
-    for(int i = 0; i < count; i++)
-    {
-        //判断是否为inf
-        int a = isinf(Laser_tmp.ranges[i]);
-        int b = isinf(Laser_tmp.ranges[i-1]);
-        int c = isinf(Laser_tmp.ranges[i+1]);
-        //如果为ibugnf，则赋值上一角度的值
-        if((a == 1)&&(b != 1)&&(c != 1))
-        {
-            if(abs(Laser_tmp.ranges[i-1]-Laser_tmp.ranges[i+1]) > 0.1 ) break;
-            if(i == 0)
-            {
-                Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
-            }
-            else
-            {
-                Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
-            }
-        }
+    // for(int i = 0; i < count; i++)
+    // {
+    //     //判断是否为inf
+    //     int a = isinf(Laser_tmp.ranges[i]);
+    //     int b = isinf(Laser_tmp.ranges[i-1]);
+    //     int c = isinf(Laser_tmp.ranges[i+1]);
+    //     //如果为ibugnf，则赋值上一角度的值
+    //     if((a == 1)&&(b != 1)&&(c != 1))
+    //     {
+    //         if(abs(Laser_tmp.ranges[i-1]-Laser_tmp.ranges[i+1]) > 0.1 ) break;
+    //         if(i == 0)
+    //         {
+    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[count-1];
+    //         }
+    //         else
+    //         {
+    //             Laser_tmp.ranges[i] = Laser_tmp.ranges[i-1];
+    //         }
+    //     }
     
-    }
+    // }
     for(int i = 0; i < count; i++)
     {
            if(i+180>359) Laser.ranges[i]=Laser_tmp.ranges[i-180];
@@ -238,12 +238,12 @@ int main(int argc, char **argv)
     int Take_off_flag;
     cout<<"Whether choose to Takeoff? 1 for Takeoff, 0 for quit"<<endl;
     cin >> Take_off_flag;
-    if(Take_off_flag == 1)
-    {
-        Command_now.command = Takeoff;
-        command_pub.publish(Command_now);
-    }
-    else return -1;
+    // if(Take_off_flag == 1)
+    // {
+    //     Command_now.command = Takeoff;
+    //     command_pub.publish(Command_now);
+    // }
+    // else return -1;
     
     int comid = 0;
     int i = 0;
@@ -254,25 +254,23 @@ int main(int argc, char **argv)
 
 
 
-    // i=0;
-    // while (i < sleep_time * 1.5)
-    // {
-    //     Command_now.command = Move_ENU;
-    //     Command_now.sub_mode = 0;
-    //     Command_now.pos_sp[0] = 0;
-    //     Command_now.pos_sp[1] = 0;
-    //     Command_now.pos_sp[2] = fly_height;
-    //     Command_now.yaw_sp = 0;
-    //     Command_now.comid = comid;
-    //     comid++;
-    //     command_pub.publish(Command_now);
-    //     rate.sleep();
-    //     cout << "Point 0 -----> takeoff & stay"<<endl;
-    //     cout << "z = "<<pos_drone.pose.position.z<<endl;
-    //     cout << "target = "<<fly_height<<endl;
-    //     cout << "time = "<< i << endl;
-    //     i++;
-    // }
+    while (pos_drone.pose.position.z < fly_height - 0.05)  //飞到指定高度   
+    {
+        ros::spinOnce();
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = 0;
+        Command_now.pos_sp[1] = 0;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 0 -----> takeoff & stay"<<endl;
+        cout << "z = "<<pos_drone.pose.position.z<<endl;
+        cout << "target = "<<fly_height<<endl;
+    }
 
     //初值
     vel_sp_ENU[0]= 0;
@@ -595,14 +593,19 @@ int change(int i){
 }
 int linefind(float height[181]) {
     float minus[180];
-    for (int i = 0; i < 180; i++) {
+    for (int i = 15; i < 165; i++) {
         minus[i] = abs(height[i] - height[i + 1]);   // 第 i 个点和第 i+1 个点的高度差
-        line[i].length = 1;
+        // line[i].length = 1;
     }
-    line[0].start = 0;
+    for(int i=0;i<180;i++){
+        line[i].length=1;
+        line[i].start=-1;
+        line[i].end=-1;
+    }
+    line[0].start = 15;
     int key = 0;
-    for (int i = 0; i < 180; i++) {
-        if (minus[i] < 0.1 && !isinf(height[i]) && (height[i] < 1.2) ) {
+    for (int i = 15; i < 165; i++) {
+        if (minus[i] < 0.1 && (height[i] < 1.2) ) {
             //调大参数提高穿门概率
             line[key].length++;
             line[key].end = i + 1;
@@ -617,12 +620,22 @@ int linefind(float height[181]) {
 void doorfind(){
     float length[181];
     float height[181];
-    for(int i=0;i<=180;i++){
+    // struct doorfind {
+    //     int start;
+    //     int end;
+    //     int length;
+    // } line[180];
+    // for(int i=0;i<180;i++){
+    //     line[i].length=-1;
+    //     line[i].start=-1;
+    //     line[i].end=-1;
+    // }
+    for(int i=10;i<=170;i++){
         length[i]=Laser.ranges[change(i)];
         height[i]=length[i]*sin(i * M_PI / 180);
     }
     
-    for(int i = 10; i <= 170;i++)
+    for(int i = 15; i <= 165;i++)
     {
         int aa = isinf(height[i]);
         int bb = isinf(height[i-1]);
@@ -632,6 +645,7 @@ void doorfind(){
             height[i] = height[i-1];
             cout <<"good"<<endl;
         }
+	cout << "height["<<i<<"]" << height[i] << endl;
     }
 
     int num_lines = linefind(height);
