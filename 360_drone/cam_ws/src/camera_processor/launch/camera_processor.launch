@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="camera_processor" type="camera_processor_node" name="camera_processor_node" output="screen"/>
+
+</launch>

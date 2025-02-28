@@ -1,0 +1,8 @@
+prefix=/home/nx/catkin_ws/install
+
+Name: tutorial_catapult
+Description: Description of tutorial_catapult
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

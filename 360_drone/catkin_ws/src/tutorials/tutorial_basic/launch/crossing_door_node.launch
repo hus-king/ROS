@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="run_mavros" default="true"/>
+    <arg name="run_move_base" default="true"/>
+    <arg name="run_fast_lio" default="true"/>
+
+    <!-- Load parameters from the YAML file -->
+    <rosparam file="/home/nx/catkin_ws/src/tutorials/tutorial_basic/config/params.yaml" command="load"/>
+
+        
+    <!--<node pkg="camera_processor" type="camera_processor_node" name="camera_processor_node" output="screen"/>-->
+    <node pkg="tutorial_basic" type="crossing_door_node" name="crossing_door_node" output="screen"/>
+    
+    <include file="$(find tutorial_basic)/launch/mavros.launch" if="$(arg run_mavros)"/>
+    <include file="$(find tutorial_navigation)/launch/mid360.launch" if="$(arg run_fast_lio)"/>
+    <include file="$(find tutorial_navigation)/launch/move_base.launch" if="$(arg run_move_base)"/>
+
+</launch>

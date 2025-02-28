@@ -1,0 +1,17 @@
+(cl:defpackage tutorial_vision-msg
+  (:use )
+  (:export
+   "<BOUNDINGBOX>"
+   "BOUNDINGBOX"
+   "<BOUNDINGBOXES>"
+   "BOUNDINGBOXES"
+   "<CIRCLEDETECTRESULT>"
+   "CIRCLEDETECTRESULT"
+   "<CIRCLEINFO>"
+   "CIRCLEINFO"
+   "<OBJECTCOUNT>"
+   "OBJECTCOUNT"
+   "<STRINGSTAMPED>"
+   "STRINGSTAMPED"
+  ))
+
