@@ -247,7 +247,7 @@ ID=2 ：圆环(circle)
 ID=3 ：方框(square)
 ID=4 ：横双框(lr_square)
 ID=5 ：竖双框(ud_square)
-ID=6 ：红色曲线型圆环(red_cur_chess)
+ID=6 ：红色曲线型棋盘格(red_cur_chess)
 ID=7 ：蓝色曲线型棋盘格(blue_cur_chess)
 */
 void darknet_box_cb(const darknet_ros_msgs::BoundingBoxes::ConstPtr &msg){
