@@ -1,0 +1,61 @@
+#yaw: 45->0.785   90->1.57   135->2.355   180->3.14   225->3.925   270->4.71   315->5.495   360->0
+
+hover_target:
+  - {x: 2.16 , y: -0.01 , z: 1.3 , yaw: 0.0 } 
+  - {x: 5.16 , y: -0.01 , z: 1.3 , yaw: 0.0 } 
+  - {x: 4.86 , y: -0.44 , z: 1.5 , yaw: 0.0 } 
+  - {x: 7.36 , y: -0.44 , z: 1.5 , yaw: 0.0 } 
+  - {x: 6.86 , y: -1.14 , z: 1.3 , yaw: -0.52 } 
+  - {x: 8.11 , y: -3.305 , z: 1.3 , yaw: -0.52 } 
+  - {x: 6.46 , y: -3.16 , z: 1.5 , yaw: -1.57 } 
+  - {x: 6.46 , y: -6.16 , z: 1.5 , yaw: -1.57 } 
+  - {x: 7.02 , y: -6.37 , z: 1.5 , yaw: -2.09 } 
+  - {x: 5.77 , y: -8.535 , z: 1.5 , yaw: -2.09 } 
+  - {x: 4.36 , y: -6.59 , z: 1.3 , yaw: -3.14 } 
+  - {x: 2.36 , y: -6.59 , z: 1.3 , yaw: -3.14 } 
+  - {x: 1.97 , y: -6.27 , z: 1.5 , yaw: -3.14 }
+  - {x: -0.53 , y: -6.27 , z: 1.5 , yaw: -3.14 }
+
+fly_height: 1.3
+
+no_target_time: 0
+find_target: false
+missed_target: false
+missed_time: 0
+rand_move_thresh: 100
+abs_distance: 5.0
+
+#xy平面对齐阈值 例如 0.1(m)
+arrival_thresh: 0.1
+#直接穿环z向阈值  例如1.0(m)
+just_go_through_thresh: 1.0
+#斜向移动时z向阈值 例如1.5(m)
+slanting_move_thresh: 1.5
+
+#图片大小
+pic_size_x: 640
+pic_size_y: 480
+
+#框大小差异阈值  例如0.3---> x 0.7 ~ x 1.3
+variable_thresh: 0.5
+#框间距离差异阈值 例如5倍框宽   注：实际方框为12倍框宽
+dist_thresh: 1.0
+
+#大型框匹配置信度阈值
+comp_conf_thres: 0.5
+#方框匹配置信度阈值
+norm_conf_thres: 0.4
+css_conf_thres: 0.4
+ovl_rate_low_thres: 0.5
+ovl_rate_high_thres: 1.1
+min_thres: 1.0
+flip_mode_thresh: 50
+
+depth_thres: 0.3
+far_thres: 3.0
+angle_thres: 0.6
+beside_thres: 1.0
+
+#turning way时远距离点丢弃
+far_distance: 2.0
+back_distance: 0.5

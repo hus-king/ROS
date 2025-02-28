@@ -1,0 +1,8 @@
+prefix=/home/nx/cam_ws/devel
+
+Name: depth_visualizer
+Description: Description of depth_visualizer
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

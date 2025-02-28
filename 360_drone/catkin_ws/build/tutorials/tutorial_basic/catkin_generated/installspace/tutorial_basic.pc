@@ -1,0 +1,8 @@
+prefix=/home/nx/catkin_ws/install
+
+Name: tutorial_basic
+Description: Description of tutorial_basic
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
