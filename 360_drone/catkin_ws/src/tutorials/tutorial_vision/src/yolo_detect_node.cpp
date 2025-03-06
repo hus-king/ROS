@@ -42,9 +42,9 @@ void pose_cb(const geometry_msgs::PoseStamped::ConstPtr &msg) {
     tf::Matrix3x3(quaternion).getRPY(current_rpy.x, current_rpy.y, current_rpy.z);
 }
 
-tutorial_vision::StringStamped sign_result;
-void yolo_cb(const tutorial_vision::StringStamped::ConstPtr &msg) {
-    sign_result = *msg;
+tutorial_vision::StringStamped qr_result;
+void qr_cb(const tutorial_vision::StringStamped::ConstPtr &msg) {
+    qr_result = *msg;
 }
 
 geometry_msgs::Point last_err;
@@ -102,21 +102,22 @@ geometry_msgs::Twist get_pid_vel(geometry_msgs::Point target) {
 }
 
 int main(int argc, char **argv) {
-    ros::init(argc, argv, "yolo_detect_node");
+    ros::init(argc, argv, "qr_detect_node");
     ros::NodeHandle nh;
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 1, state_cb);
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 1, pose_cb);
-    ros::Subscriber yolo_sub = nh.subscribe<tutorial_vision::StringStamped>("yolo_detect", 1, yolo_cb);
+    //订阅检测节点
+    ros::Subscriber qr_sub = nh.subscribe<tutorial_vision::StringStamped>("qr_detect_result", 1, qr_cb);
     ros::Publisher vel_pub = nh.advertise<geometry_msgs::TwistStamped>("mavros/setpoint_velocity/cmd_vel", 1);
     ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
     ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 
     // Get hovering location in parameters
-    geometry_msgs::Point sign_target;
+    geometry_msgs::Point qr_target;
     ros::NodeHandle param_nh("~");
-    sign_target.x = param_nh.param("sign_x", 0.);
-    sign_target.y = param_nh.param("sign_y", 0.);
-    sign_target.z = param_nh.param("sign_z", 1.);
+    qr_target.x = param_nh.param("qr_x", 0.);
+    qr_target.y = param_nh.param("qr_y", 0.);
+    qr_target.z = param_nh.param("qr_z", 1.);
 
     // Wait for FCU connection
     ros::Rate rate(20.0);
@@ -163,7 +164,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 2:  // Takeoff state
-                if (current_pose.pose.position.z > sign_target.z) {
+                if (current_pose.pose.position.z > qr_target.z) {
                     fsm_state = 3;  // goto move state
                     last_srv_request = ros::Time::now();
                 } else {
@@ -171,22 +172,22 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 3:  // Move state
-                if (getLengthBetweenPoints(sign_target, current_pose.pose.position) > 0.3) {
+                if (getLengthBetweenPoints(qr_target, current_pose.pose.position) > 0.3) {
                     last_srv_request = ros::Time::now();
                 }
                 if (ros::Time::now() - last_srv_request > ros::Duration(1.5)) {
                     fsm_state = 4;  // goto detect and print state
                 } else {  // PID control
-                    twist.twist = get_pid_vel(sign_target);
+                    twist.twist = get_pid_vel(qr_target);
                 }
                 break;
             case 4:  // Detect and print state
-                if (ros::Time::now() - sign_result.header.stamp < ros::Duration(3.0) && sign_result.data.size() > 0) {
-                    std::cout << "Yolo Detected: " << sign_result.data[0] << std::endl;
+                if (ros::Time::now() - qr_result.header.stamp < ros::Duration(1.0) && qr_result.data.size() > 0) {
+                    std::cout << "QR Detected: " << qr_result.data[0] << std::endl;
                     fsm_state = 5;  // goto hover state
                     last_srv_request = ros::Time::now();
                 } else {
-                    twist.twist = get_pid_vel(sign_target);
+                    twist.twist = get_pid_vel(qr_target);
                 }
                 break;
             case 5:  // Hover state
@@ -194,18 +195,18 @@ int main(int argc, char **argv) {
                     fsm_state = 6;  // goto move back state
                     last_srv_request = ros::Time::now();
                 } else {  // PID control
-                    twist.twist = get_pid_vel(sign_target);
+                    twist.twist = get_pid_vel(qr_target);
                 }
                 break;
             case 6:  // Move back state
-                if (getLengthBetweenPoints(current_pose.pose.position, .0, .0, sign_target.z) > 0.3) {
+                if (getLengthBetweenPoints(current_pose.pose.position, .0, .0, qr_target.z) > 0.3) {
                     last_srv_request = ros::Time::now();
                 }
                 if (ros::Time::now() - last_srv_request > ros::Duration(1.5)) {
                     fsm_state = 7;  // goto land state
                 } else {  // PID control
                     geometry_msgs::Point origin_point;
-                    origin_point.z = sign_target.z;
+                    origin_point.z = qr_target.z;
                     twist.twist = get_pid_vel(origin_point);
                 }
                 break;
