@@ -1,4 +1,5 @@
 ###### pyzbar
+*注意opencv本身不支持中文字体,可以引入其他库*
 - `pyzbar`包中有`decode`方法,用于对二维码的解码
 - 可以用`from pyzbar.pyzbar import decode`引入
 - 该函数返回元素为`Decoded`对象的一个列表(如decode_objects = decode(cv_image))
@@ -111,3 +112,34 @@ if __name__ == "__main__":
 
 ![测试图片1](images/qr_hello.png)
 ![测试图片2](images/qr_mine.png)
+
+当然不能少了生成二维码的脚本(此脚本的二维码不保存)
+```python
+import qrcode
+from PIL import Image
+
+def generate_and_show_qr_code(data):
+    # 创建二维码对象
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    # 添加数据到二维码
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    # 生成图像
+    img = qr.make_image(fill_color="black", back_color="white")
+    # 展示图像
+    img.show()
+
+if __name__ == "__main__":
+    while True:
+        data = input("请输入要生成二维码的数据（输入 'q' 退出）：")
+        if data.lower() == 'q':
+            break
+        generate_and_show_qr_code(data)
+        print("QR code generated and displayed.")
+```
