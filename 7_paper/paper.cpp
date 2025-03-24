@@ -10,7 +10,7 @@
 #include <cmath>
 #include <stdlib.h>
 #include <math_utils.h>
-#include <algorithm> // 添加此头文件以使用 std::sort
+#include <algorithm>
 
 
 using namespace std;
