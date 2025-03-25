@@ -55,7 +55,7 @@ int range_max;                                                //激光雷达探�
 float last_time = 0;
 float fly_height;
 float fly_forward;
-float fly_turn = -90;
+float fly_turn = 0;
 //--------------------------------------------算法相关--------------------------------------------------
 float R_outside,R_inside;                                       //安全半径 [避障算法相关参数]
 float p_R;                                                      //大圈比例参数
@@ -177,8 +177,8 @@ int main(int argc, char **argv)
     //【订阅】darknet数据
     // ros::Subscriber darknet_box_sub = nh.subscribe<darknet_ros_msgs::BoundingBoxes>("/darknet_ros/bounding_boxes", 100, darknet_box_cb);
     //【订阅】Lidar数据
-    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
-    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
+    //ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_cb);
+    ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
 
@@ -284,15 +284,15 @@ int main(int argc, char **argv)
         Command_now.pos_sp[2] =  fly_height;
         Command_now.yaw_sp = fly_turn ;
 
-        // float abs_distance;
-        // abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
+        float abs_distance;
+        abs_distance = sqrt((pos_drone.pose.position.x - target_x) * (pos_drone.pose.position.x - target_x) + (pos_drone.pose.position.y - target_y) * (pos_drone.pose.position.y - target_y));
         // if(abs_distance < 0.3 || flag_land == 1)
         // {
         //     Command_now.command = 3;     //Land
         //     flag_land = 1;
         // }
         // if(flag_land == 1) Command_now.command = Land;
-        // command_pub.publish(Command_now);
+        command_pub.publish(Command_now);
         //打印
         printf();
         rate.sleep();
