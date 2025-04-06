@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <math_utils.h>
 #include <algorithm>
+#include <my_opencv_pkg/square_center.h>
 
 
 using namespace std;
@@ -48,6 +49,7 @@ sensor_msgs::LaserScan Laser;                                   //激光雷达�
 geometry_msgs::PoseStamped pos_drone;                                  //无人机当前位置
 Eigen::Quaterniond q_fcu;
 Eigen::Vector3d Euler_fcu;
+my_opencv_pkg::square_center square_center;
 float target_x;                                                 //期望位置_x
 float target_y;                                                 //期望位置_y
 int range_min;                                                //激光雷达探测范围 最小角度
@@ -167,6 +169,15 @@ void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 // {
 //     darknet_boxes=*msg;
 // }
+void square_cb(const my_opencv_pkg::square_center::ConstPtr& msg) {
+    //ROS_INFO("Received square center message: x=%.2f, y=%.2f, width=%.2f, height=%.2f, center_x=%.2f, center_y=%.2f",
+    //         msg->x, msg->y, msg->width, msg->height, msg->center_x, msg->center_y);
+    // 处理接收到的消息
+    square_center = *msg;
+    // 这里可以添加处理逻辑，例如更新全局变量或执行其他操作
+
+}
+
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>主 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 int main(int argc, char **argv)
 {
@@ -181,11 +192,16 @@ int main(int argc, char **argv)
     ros::Subscriber lidar_sub = nh.subscribe<sensor_msgs::LaserScan>("/laser/scan", 1000, lidar_cb);
     //【订阅】无人机当前位置 坐标系 NED系
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 100, pos_cb);
+    // 【订阅】无人机的降落检测结果
+    ros::Subscriber squre_sub = nh.subscribe<my_opencv_pkg::square_center>("/my_opencv_pkg/square_center", 10, square_cb);
+    
 
     // 【订阅】yolov5检测结果 Qrcode
 
     // 【发布】发送给position_control.cpp的命令
     ros::Publisher command_pub = nh.advertise<px4_command::command>("/px4/command", 10);
+    // ros::Publisher flag_pub = nh.advertise<std_msgs::Bool>("/px4/flag", 10);
+    ros::Publisher detect_pub = nh.advertise<my_opencv_pkg::detector_bool>("/my_opencv_pkg/detector_bool", 1);
 
     //读取参数表中的参数
     nh.param<float>("target_x", target_x, 1.0); //dyx
@@ -296,6 +312,7 @@ int main(int argc, char **argv)
             break;
         }
         command_pub.publish(Command_now);
+        
         //打印
         printf();
         rate.sleep();
@@ -319,6 +336,15 @@ int main(int argc, char **argv)
         cout << "target_x = "<<target_x<<endl;
         cout << "target_y = "<<target_y<<endl;
     }
+
+    // 发布检测消息:
+    my_opencv_pkg::detector_bool detect_msg;
+    detect_msg.detect = true; // 设置检测标志为true
+    detect_pub.publish(detect_msg);
+    // 发布消息
+    ros::Duration(0.5).sleep(); // 等待一段时间以确保消息被发送
+
+    
     return 0;
 }
 
