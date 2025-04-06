@@ -319,7 +319,6 @@ int main(int argc, char **argv)
         cout << "target_x = "<<target_x<<endl;
         cout << "target_y = "<<target_y<<endl;
     }
-
     return 0;
 }
 
@@ -372,6 +371,7 @@ void cone_avoidance(float target_x,float target_y){
 }
 void printf()
 {
+    cout << "Point 1 -----> fly"<<endl;
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>collision_avoidance<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Minimun_distance : "<<endl;
     cout << "Distance : " << distance_c << " [m] "<<endl;
