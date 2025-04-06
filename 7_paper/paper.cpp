@@ -292,11 +292,34 @@ int main(int argc, char **argv)
         //     flag_land = 1;
         // }
         // if(flag_land == 1) Command_now.command = Land;
+        if(abs_distance < 0.3){
+            break;
+        }
         command_pub.publish(Command_now);
         //打印
         printf();
         rate.sleep();
     }
+    while (ros::ok())  //飞到指定高度   
+    {
+        ros::spinOnce();
+        Command_now.command = Move_ENU;
+        Command_now.sub_mode = 0;
+        Command_now.pos_sp[0] = target_x;
+        Command_now.pos_sp[1] = target_y;
+        Command_now.pos_sp[2] = fly_height;
+        Command_now.yaw_sp = 0;
+        Command_now.comid = comid;
+        comid++;
+        command_pub.publish(Command_now);
+        rate.sleep();
+        cout << "Point 2 -----> detect"<<endl;
+        cout << "x = "<<pos_drone.pose.position.y<<endl;
+        cout << "y = "<<pos_drone.pose.position.x<<endl;
+        cout << "target_x = "<<target_x<<endl;
+        cout << "target_y = "<<target_y<<endl;
+    }
+
     return 0;
 }
 
