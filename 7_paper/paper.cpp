@@ -12,7 +12,7 @@
 #include <math_utils.h>
 #include <algorithm>
 #include <my_opencv_pkg/square_center.h>
-
+#include <my_opencv_pkg/detector_bool.h>
 
 using namespace std;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>全 局 变 量<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
