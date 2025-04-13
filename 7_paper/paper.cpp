@@ -327,17 +327,21 @@ int main(int argc, char **argv)
     detect_msg.detect = true; // 设置检测标志为true
     detect_pub.publish(detect_msg);
     // 发布消息
-    ros::Duration(0.5).sleep(); // 等待一段时间以确保消息被发送
+    ros::Duration(5).sleep(); // 等待一段时间以确保消息被发送
 
     // 获取square_center消息:
-    while(ros::ok())
-    {
-        ros::spinOnce();
-        cout << "square_center.x: " << square_center.x << endl;
-        cout << "square_center.y: " << square_center.y << endl;
-    }
+    ros::spinOnce();
+    cout << "square_center.x: " << square_center.x << endl;
+    cout << "square_center.y: " << square_center.y << endl;
+    //center = (320,283)
+    int dx = square_center.x - 320;
+    int dy = square_center.y - 283;
+    float adjust_x = 0.0;
+    float adjust_y = 0.0;
 
-    while (ros::ok())  //飞到指定高度   
+    
+
+    while (ros::ok())
     {
         ros::spinOnce();
         Command_now.command = Move_ENU;
