@@ -4,8 +4,8 @@ gnome-terminal --window -e 'bash -c "roscore; exec bash"' \
 --tab -e 'bash -c "sleep 5; roslaunch mavros px4.launch fcu_url:="/dev/ttyTHS1:921600" gcs_url:="udp://@192.168.43.11"; exec bash"' \
 --tab -e 'bash -c "sleep 5; roslaunch rplidar_ros rplidar.launch; exec bash"' \
 --tab -e 'bash -c "sleep 5; roslaunch realsense2_camera rs_t265.launch; exec bash"' \
---tab -e 'bash -c "sleep 5; roslaunch usb_cam usb_cam-test.launch; exec bash"' \
---tab -e 'bash -c "sleep 5; roslaunch yolov5_ros yolo_v5.launch; exec bash"' \
+--tab -e 'bash -c "sleep 5; roslaunch my_opencv_pkg camera_down.launch; exec bash"' \
 --tab -e 'bash -c "sleep 5; roslaunch px4_command px4_pos_estimator.launch; exec bash"' \
 --tab -e 'bash -c "sleep 5; roslaunch px4_command px4_vel_controller.launch; exec bash"' \
---tab -e 'bash -c "sleep 6; roslaunch px4_command winter.launch; exec bash"' \
+--tab -e 'bash -c "sleep 6; roslaunch px4_command collision_avoidance.launch; exec bash"' \
+--tab -e 'bash -c "sleep 5; roslaunch my_opencv_pkg white_paper_detector.launch; exec bash"' \
