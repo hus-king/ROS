@@ -57,6 +57,8 @@ float vel_sp_ENU_all = 0.2;
 float sleep_time;
 float vel_sp_max;                                               //总速度限幅
 px4_command::command Command_now;                               //发送给position_control.cpp的命令
+float fx=554.3827;                                               //相机内参（待测）
+float fy=554.3827;
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>声 明 函 数<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 void cal_min_distance();
 void printf();                                                                       //打印函数
@@ -230,6 +232,10 @@ int main(int argc, char **argv)
     int dx = square_center.x - 320;
     int dy = square_center.y - 283;
     //存疑，需要实操验证
+    int adjust_flag = 0;
+    if (abs(dx) > 10 || abs(dy) > 10) adjust_flag = 1; //如果偏差大于10，进行调整
+    if (abs(dx) > 30 || abs(dy) > 30) adjust_flag = 0; //如果偏差大于30，不调整
+    cout << "adjust_flag = "<<adjust_flag<<endl;
 
     //dx,dy为像素差值
     //根据像素差值计算ENU坐标系下的差值
@@ -238,7 +244,7 @@ int main(int argc, char **argv)
     
     int i = 0;
     //while (ros::ok()) //测试用
-    while (i < sleep_time / 4) //2.5s
+    while (i < sleep_time / 4 && adjust_flag == 1) //2.5s
     {
         ros::spinOnce();
         Command_now.command = Move_ENU;
