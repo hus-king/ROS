@@ -229,8 +229,8 @@ int main(int argc, char **argv)
     cout << "square_center.y: " << square_center.y << endl;
     //square_center.x与square_center.y为现在飞机中心的像素坐标
     //目标位置 center = (320,283)
-    int dx = square_center.x - 320;
-    int dy = square_center.y - 283;
+    int dx = square_center.y - 320;
+    int dy = square_center.x - 283;
     //存疑，需要实操验证
     int adjust_flag = 0;
     if (abs(dx) > 10 || abs(dy) > 10) adjust_flag = 1; //如果偏差大于10，进行调整
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
         Command_now.command = Move_ENU;
         Command_now.sub_mode = 0;
         Command_now.pos_sp[0] = target_x + adjust_x; // 目标位置加上调整值
-        Command_now.pos_sp[1] = target_y + adjust_y; // 目标位置加上调整值
+        Command_now.pos_sp[1] = target_y - adjust_y; // 目标位置加上调整值
         Command_now.pos_sp[2] = fly_height;
         Command_now.yaw_sp = 0;
         Command_now.comid = comid;
